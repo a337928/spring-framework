@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,10 +19,11 @@ package org.springframework.core.io.support;
 import java.lang.reflect.Modifier;
 import java.util.List;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.junit.Assert.*;
 
 /**
  * Tests for {@link SpringFactoriesLoader}.
@@ -31,32 +32,33 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  * @author Phillip Webb
  * @author Sam Brannen
  */
-class SpringFactoriesLoaderTests {
+public class SpringFactoriesLoaderTests {
+
+	@Rule
+	public final ExpectedException exception = ExpectedException.none();
 
 	@Test
-	void loadFactoriesInCorrectOrder() {
+	public void loadFactoriesInCorrectOrder() {
 		List<DummyFactory> factories = SpringFactoriesLoader.loadFactories(DummyFactory.class, null);
-		assertThat(factories.size()).isEqualTo(2);
-		boolean condition1 = factories.get(0) instanceof MyDummyFactory1;
-		assertThat(condition1).isTrue();
-		boolean condition = factories.get(1) instanceof MyDummyFactory2;
-		assertThat(condition).isTrue();
+		assertEquals(2, factories.size());
+		assertTrue(factories.get(0) instanceof MyDummyFactory1);
+		assertTrue(factories.get(1) instanceof MyDummyFactory2);
 	}
 
 	@Test
-	void loadPackagePrivateFactory() {
+	public void loadPackagePrivateFactory() {
 		List<DummyPackagePrivateFactory> factories =
 				SpringFactoriesLoader.loadFactories(DummyPackagePrivateFactory.class, null);
-		assertThat(factories.size()).isEqualTo(1);
-		assertThat(Modifier.isPublic(factories.get(0).getClass().getModifiers())).isFalse();
+		assertEquals(1, factories.size());
+		assertFalse(Modifier.isPublic(factories.get(0).getClass().getModifiers()));
 	}
 
 	@Test
-	void attemptToLoadFactoryOfIncompatibleType() {
-		assertThatIllegalArgumentException().isThrownBy(() ->
-				SpringFactoriesLoader.loadFactories(String.class, null))
-			.withMessageContaining("Unable to instantiate factory class "
-					+ "[org.springframework.core.io.support.MyDummyFactory1] for factory type [java.lang.String]");
+	public void attemptToLoadFactoryOfIncompatibleType() {
+		exception.expect(IllegalArgumentException.class);
+		exception.expectMessage("Unable to instantiate factory class [org.springframework.core.io.support.MyDummyFactory1] for factory type [java.lang.String]");
+
+		SpringFactoriesLoader.loadFactories(String.class, null);
 	}
 
 }

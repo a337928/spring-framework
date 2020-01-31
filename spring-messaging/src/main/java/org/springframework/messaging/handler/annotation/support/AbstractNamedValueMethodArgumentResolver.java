@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -26,7 +26,6 @@ import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.TypeDescriptor;
-import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.handler.annotation.ValueConstants;
@@ -46,7 +45,7 @@ import org.springframework.util.ClassUtils;
  * Expression Language {@code #{...}} expressions which will be resolved if a
  * {@link ConfigurableBeanFactory} is supplied to the class constructor.
  *
- * <p>A {@link ConversionService} is used to convert a resolved String argument
+ * <p>A {@link ConversionService} is used to to convert resolved String argument
  * value to the expected target method parameter type.
  *
  * @author Rossen Stoyanchev
@@ -76,13 +75,7 @@ public abstract class AbstractNamedValueMethodArgumentResolver implements Handle
 	protected AbstractNamedValueMethodArgumentResolver(ConversionService conversionService,
 			@Nullable ConfigurableBeanFactory beanFactory) {
 
-		// Fallback on shared ConversionService for now for historic reasons.
-		// Possibly remove after discussion in gh-23882.
-
-		//noinspection ConstantConditions
-		this.conversionService = conversionService != null ?
-				conversionService : DefaultConversionService.getSharedInstance();
-
+		this.conversionService = conversionService;
 		this.configurableBeanFactory = beanFactory;
 		this.expressionContext = (beanFactory != null ? new BeanExpressionContext(beanFactory, null) : null);
 	}

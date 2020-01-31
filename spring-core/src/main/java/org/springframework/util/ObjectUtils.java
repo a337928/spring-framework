@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -54,7 +54,6 @@ public abstract class ObjectUtils {
 	private static final String ARRAY_END = "}";
 	private static final String EMPTY_ARRAY = ARRAY_START + ARRAY_END;
 	private static final String ARRAY_ELEMENT_SEPARATOR = ", ";
-	private static final Object[] EMPTY_OBJECT_ARRAY = new Object[0];
 
 
 	/**
@@ -283,14 +282,14 @@ public abstract class ObjectUtils {
 			return (Object[]) source;
 		}
 		if (source == null) {
-			return EMPTY_OBJECT_ARRAY;
+			return new Object[0];
 		}
 		if (!source.getClass().isArray()) {
 			throw new IllegalArgumentException("Source is not an array: " + source);
 		}
 		int length = Array.getLength(source);
 		if (length == 0) {
-			return EMPTY_OBJECT_ARRAY;
+			return new Object[0];
 		}
 		Class<?> wrapperType = Array.get(source, 0).getClass();
 		Object[] newArray = (Object[]) Array.newInstance(wrapperType, length);
@@ -611,9 +610,7 @@ public abstract class ObjectUtils {
 		if (obj == null) {
 			return EMPTY_STRING;
 		}
-		String className = obj.getClass().getName();
-		String identityHexString = getIdentityHexString(obj);
-		return className + '@' + identityHexString;
+		return obj.getClass().getName() + "@" + getIdentityHexString(obj);
 	}
 
 	/**
@@ -713,11 +710,11 @@ public abstract class ObjectUtils {
 		if (length == 0) {
 			return EMPTY_ARRAY;
 		}
-		StringJoiner stringJoiner = new StringJoiner(ARRAY_ELEMENT_SEPARATOR, ARRAY_START, ARRAY_END);
+		StringJoiner sj = new StringJoiner(ARRAY_ELEMENT_SEPARATOR, ARRAY_START, ARRAY_END);
 		for (Object o : array) {
-			stringJoiner.add(String.valueOf(o));
+			sj.add(String.valueOf(o));
 		}
-		return stringJoiner.toString();
+		return sj.toString();
 	}
 
 	/**
@@ -737,11 +734,19 @@ public abstract class ObjectUtils {
 		if (length == 0) {
 			return EMPTY_ARRAY;
 		}
-		StringJoiner stringJoiner = new StringJoiner(ARRAY_ELEMENT_SEPARATOR, ARRAY_START, ARRAY_END);
-		for (boolean b : array) {
-			stringJoiner.add(String.valueOf(b));
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < length; i++) {
+			if (i == 0) {
+				sb.append(ARRAY_START);
+			}
+			else {
+				sb.append(ARRAY_ELEMENT_SEPARATOR);
+			}
+
+			sb.append(array[i]);
 		}
-		return stringJoiner.toString();
+		sb.append(ARRAY_END);
+		return sb.toString();
 	}
 
 	/**
@@ -761,11 +766,18 @@ public abstract class ObjectUtils {
 		if (length == 0) {
 			return EMPTY_ARRAY;
 		}
-		StringJoiner stringJoiner = new StringJoiner(ARRAY_ELEMENT_SEPARATOR, ARRAY_START, ARRAY_END);
-		for (byte b : array) {
-			stringJoiner.add(String.valueOf(b));
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < length; i++) {
+			if (i == 0) {
+				sb.append(ARRAY_START);
+			}
+			else {
+				sb.append(ARRAY_ELEMENT_SEPARATOR);
+			}
+			sb.append(array[i]);
 		}
-		return stringJoiner.toString();
+		sb.append(ARRAY_END);
+		return sb.toString();
 	}
 
 	/**
@@ -785,11 +797,18 @@ public abstract class ObjectUtils {
 		if (length == 0) {
 			return EMPTY_ARRAY;
 		}
-		StringJoiner stringJoiner = new StringJoiner(ARRAY_ELEMENT_SEPARATOR, ARRAY_START, ARRAY_END);
-		for (char c : array) {
-			stringJoiner.add('\'' + String.valueOf(c) + '\'');
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < length; i++) {
+			if (i == 0) {
+				sb.append(ARRAY_START);
+			}
+			else {
+				sb.append(ARRAY_ELEMENT_SEPARATOR);
+			}
+			sb.append("'").append(array[i]).append("'");
 		}
-		return stringJoiner.toString();
+		sb.append(ARRAY_END);
+		return sb.toString();
 	}
 
 	/**
@@ -809,11 +828,19 @@ public abstract class ObjectUtils {
 		if (length == 0) {
 			return EMPTY_ARRAY;
 		}
-		StringJoiner stringJoiner = new StringJoiner(ARRAY_ELEMENT_SEPARATOR, ARRAY_START, ARRAY_END);
-		for (double d : array) {
-			stringJoiner.add(String.valueOf(d));
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < length; i++) {
+			if (i == 0) {
+				sb.append(ARRAY_START);
+			}
+			else {
+				sb.append(ARRAY_ELEMENT_SEPARATOR);
+			}
+
+			sb.append(array[i]);
 		}
-		return stringJoiner.toString();
+		sb.append(ARRAY_END);
+		return sb.toString();
 	}
 
 	/**
@@ -833,11 +860,19 @@ public abstract class ObjectUtils {
 		if (length == 0) {
 			return EMPTY_ARRAY;
 		}
-		StringJoiner stringJoiner = new StringJoiner(ARRAY_ELEMENT_SEPARATOR, ARRAY_START, ARRAY_END);
-		for (float f : array) {
-			stringJoiner.add(String.valueOf(f));
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < length; i++) {
+			if (i == 0) {
+				sb.append(ARRAY_START);
+			}
+			else {
+				sb.append(ARRAY_ELEMENT_SEPARATOR);
+			}
+
+			sb.append(array[i]);
 		}
-		return stringJoiner.toString();
+		sb.append(ARRAY_END);
+		return sb.toString();
 	}
 
 	/**
@@ -857,11 +892,18 @@ public abstract class ObjectUtils {
 		if (length == 0) {
 			return EMPTY_ARRAY;
 		}
-		StringJoiner stringJoiner = new StringJoiner(ARRAY_ELEMENT_SEPARATOR, ARRAY_START, ARRAY_END);
-		for (int i : array) {
-			stringJoiner.add(String.valueOf(i));
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < length; i++) {
+			if (i == 0) {
+				sb.append(ARRAY_START);
+			}
+			else {
+				sb.append(ARRAY_ELEMENT_SEPARATOR);
+			}
+			sb.append(array[i]);
 		}
-		return stringJoiner.toString();
+		sb.append(ARRAY_END);
+		return sb.toString();
 	}
 
 	/**
@@ -881,11 +923,18 @@ public abstract class ObjectUtils {
 		if (length == 0) {
 			return EMPTY_ARRAY;
 		}
-		StringJoiner stringJoiner = new StringJoiner(ARRAY_ELEMENT_SEPARATOR, ARRAY_START, ARRAY_END);
-		for (long l : array) {
-			stringJoiner.add(String.valueOf(l));
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < length; i++) {
+			if (i == 0) {
+				sb.append(ARRAY_START);
+			}
+			else {
+				sb.append(ARRAY_ELEMENT_SEPARATOR);
+			}
+			sb.append(array[i]);
 		}
-		return stringJoiner.toString();
+		sb.append(ARRAY_END);
+		return sb.toString();
 	}
 
 	/**
@@ -905,11 +954,18 @@ public abstract class ObjectUtils {
 		if (length == 0) {
 			return EMPTY_ARRAY;
 		}
-		StringJoiner stringJoiner = new StringJoiner(ARRAY_ELEMENT_SEPARATOR, ARRAY_START, ARRAY_END);
-		for (short s : array) {
-			stringJoiner.add(String.valueOf(s));
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < length; i++) {
+			if (i == 0) {
+				sb.append(ARRAY_START);
+			}
+			else {
+				sb.append(ARRAY_ELEMENT_SEPARATOR);
+			}
+			sb.append(array[i]);
 		}
-		return stringJoiner.toString();
+		sb.append(ARRAY_END);
+		return sb.toString();
 	}
 
 }

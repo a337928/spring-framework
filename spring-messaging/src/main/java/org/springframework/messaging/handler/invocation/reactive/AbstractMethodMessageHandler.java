@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -53,7 +53,6 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.ObjectUtils;
-import org.springframework.util.RouteMatcher;
 
 /**
  * Abstract base class for reactive HandlerMethod-based message handling.
@@ -86,12 +85,6 @@ public abstract class AbstractMethodMessageHandler<T>
 	protected final Log logger = LogFactory.getLog(getClass());
 
 
-	@Nullable
-	private Predicate<Class<?>> handlerPredicate;
-
-	@Nullable
-	List<Object> handlers;
-
 	private ArgumentResolverConfigurer argumentResolverConfigurer = new ArgumentResolverConfigurer();
 
 	private ReturnValueHandlerConfigurer returnValueHandlerConfigurer = new ReturnValueHandlerConfigurer();
@@ -108,38 +101,6 @@ public abstract class AbstractMethodMessageHandler<T>
 
 	private final MultiValueMap<String, T> destinationLookup = new LinkedMultiValueMap<>(64);
 
-
-	/**
-	 * Configure a predicate for selecting which Spring beans to check for the
-	 * presence of message handler methods.
-	 * <p>This is not set by default. However sub-classes may initialize it to
-	 * some default strategy (e.g. {@code @Controller} classes).
-	 * @see #setHandlers(List)
-	 */
-	public void setHandlerPredicate(@Nullable Predicate<Class<?>> handlerPredicate) {
-		this.handlerPredicate = handlerPredicate;
-	}
-
-	/**
-	 * Return the {@link #setHandlerPredicate configured} handler predicate.
-	 */
-	@Nullable
-	public Predicate<Class<?>> getHandlerPredicate() {
-		return this.handlerPredicate;
-	}
-
-	/**
-	 * Manually configure the handlers to check for the presence of message
-	 * handling methods, which also disables auto-detection via a
-	 * {@link #setHandlerPredicate(Predicate) handlerPredicate}. If you do not
-	 * want to disable auto-detection, then call this method first, and then set
-	 * the handler predicate.
-	 * @param handlers the handlers to check
-	 */
-	public void setHandlers(List<Object> handlers) {
-		this.handlers = handlers;
-		this.handlerPredicate = null;
-	}
 
 	/**
 	 * Configure custom resolvers for handler method arguments.
@@ -203,8 +164,8 @@ public abstract class AbstractMethodMessageHandler<T>
 	}
 
 	public String getBeanName() {
-		return (this.beanName != null ? this.beanName :
-				getClass().getSimpleName() + "@" + ObjectUtils.getIdentityHexString(this));
+		return this.beanName != null ? this.beanName :
+				getClass().getSimpleName() + "@" + ObjectUtils.getIdentityHexString(this);
 	}
 
 	/**
@@ -230,15 +191,6 @@ public abstract class AbstractMethodMessageHandler<T>
 	 */
 	public MultiValueMap<String, T> getDestinationLookup() {
 		return CollectionUtils.unmodifiableMultiValueMap(this.destinationLookup);
-	}
-
-	/**
-	 * Return the argument resolvers initialized during {@link #afterPropertiesSet()}.
-	 * Primarily for internal use in sub-classes.
-	 * @since 5.2.2
-	 */
-	protected HandlerMethodArgumentResolverComposite getArgumentResolvers() {
-		return this.invocableHelper.getArgumentResolvers();
 	}
 
 
@@ -276,20 +228,13 @@ public abstract class AbstractMethodMessageHandler<T>
 
 
 	private void initHandlerMethods() {
-		if (this.handlers != null) {
-			for (Object handler : this.handlers) {
-				detectHandlerMethods(handler);
-			}
-		}
-		Predicate<Class<?>> predicate = this.handlerPredicate;
-		if (predicate == null) {
-			if (logger.isDebugEnabled()) {
-				logger.debug("[" + getBeanName() + "] Skip auto-detection of message handling methods");
-			}
+		if (this.applicationContext == null) {
+			logger.warn("No ApplicationContext available for detecting beans with message handling methods.");
 			return;
 		}
-		if (this.applicationContext == null) {
-			logger.warn("No ApplicationContext for auto-detection of beans with message handling methods.");
+		Predicate<Class<?>> handlerPredicate = initHandlerPredicate();
+		if (handlerPredicate == null) {
+			logger.warn("[" + getBeanName() + "] No auto-detection of handler methods (e.g. in @Controller).");
 			return;
 		}
 		for (String beanName : this.applicationContext.getBeanNamesForType(Object.class)) {
@@ -304,7 +249,7 @@ public abstract class AbstractMethodMessageHandler<T>
 						logger.debug("Could not resolve target class for bean with name '" + beanName + "'", ex);
 					}
 				}
-				if (beanType != null && predicate.test(beanType)) {
+				if (beanType != null && handlerPredicate.test(beanType)) {
 					detectHandlerMethods(beanName);
 				}
 			}
@@ -312,10 +257,18 @@ public abstract class AbstractMethodMessageHandler<T>
 	}
 
 	/**
+	 * Return the predicate to use to check whether a given Spring bean should
+	 * be introspected for message handling methods. If {@code null} is
+	 * returned, auto-detection is effectively disabled.
+	 */
+	@Nullable
+	protected abstract Predicate<Class<?>> initHandlerPredicate();
+
+	/**
 	 * Detect if the given handler has any methods that can handle messages and if
 	 * so register it with the extracted mapping information.
 	 * <p><strong>Note:</strong> This method is protected and can be invoked by
-	 * subclasses, but this should be done on startup only as documented in
+	 * sub-classes, but this should be done on startup only as documented in
 	 * {@link #registerHandlerMethod}.
 	 * @param handler the handler to check, either an instance of a Spring bean name
 	 */
@@ -367,7 +320,7 @@ public abstract class AbstractMethodMessageHandler<T>
 	/**
 	 * Register a handler method and its unique mapping.
 	 * <p><strong>Note:</strong> This method is protected and can be invoked by
-	 * subclasses. Keep in mind however that the registration is not protected
+	 * sub-classes. Keep in mind however that the registration is not protected
 	 * for concurrent use, and is expected to be done on startup.
 	 * @param handler the bean name of the handler or the handler instance
 	 * @param method the method to register
@@ -386,7 +339,6 @@ public abstract class AbstractMethodMessageHandler<T>
 					oldHandlerMethod.getBean() + "' bean method\n" + oldHandlerMethod + " mapped.");
 		}
 
-		mapping = extendMapping(mapping, newHandlerMethod);
 		this.handlerMethods.put(mapping, newHandlerMethod);
 
 		for (String pattern : getDirectLookupMappings(mapping)) {
@@ -413,25 +365,10 @@ public abstract class AbstractMethodMessageHandler<T>
 	}
 
 	/**
-	 * This method is invoked just before mappings are added. It allows
-	 * sub-classes to update the mapping with the {@link HandlerMethod} in mind.
-	 * This can be useful when the method signature is used to refine the
-	 * mapping, e.g. based on the cardinality of input and output.
-	 * <p>By default this method returns the mapping that is passed in.
-	 * @param mapping the mapping to be added
-	 * @param handlerMethod the target handler for the mapping
-	 * @return a new mapping or the same
-	 * @since 5.2.2
-	 */
-	protected T extendMapping(T mapping, HandlerMethod handlerMethod) {
-		return mapping;
-	}
-
-	/**
 	 * Return String-based destinations for the given mapping, if any, that can
 	 * be used to find matches with a direct lookup (i.e. non-patterns).
 	 * <p><strong>Note:</strong> This is completely optional. The mapping
-	 * metadata for a subclass may support neither direct lookups, nor String
+	 * metadata for a sub-class may support neither direct lookups, nor String
 	 * based destinations.
 	 */
 	protected abstract Set<String> getDirectLookupMappings(T mapping);
@@ -439,22 +376,12 @@ public abstract class AbstractMethodMessageHandler<T>
 
 	@Override
 	public Mono<Void> handleMessage(Message<?> message) throws MessagingException {
-		Match<T> match = null;
-		try {
-			match = getHandlerMethod(message);
-		}
-		catch (Exception ex) {
-			return Mono.error(ex);
-		}
+		Match<T> match = getHandlerMethod(message);
 		if (match == null) {
 			// handleNoMatch would have been invoked already
 			return Mono.empty();
 		}
-		return handleMatch(match.mapping, match.handlerMethod, message);
-	}
-
-	protected Mono<Void> handleMatch(T mapping, HandlerMethod handlerMethod, Message<?> message) {
-		handlerMethod = handlerMethod.createWithResolvedBean();
+		HandlerMethod handlerMethod = match.getHandlerMethod().createWithResolvedBean();
 		return this.invocableHelper.handleMessage(handlerMethod, message);
 	}
 
@@ -462,8 +389,8 @@ public abstract class AbstractMethodMessageHandler<T>
 	private Match<T> getHandlerMethod(Message<?> message) {
 		List<Match<T>> matches = new ArrayList<>();
 
-		RouteMatcher.Route destination = getDestination(message);
-		List<T> mappingsByUrl = (destination != null ? this.destinationLookup.get(destination.value()) : null);
+		String destination = getDestination(message);
+		List<T> mappingsByUrl = destination != null ? this.destinationLookup.get(destination) : null;
 		if (mappingsByUrl != null) {
 			addMatchesToCollection(mappingsByUrl, message, matches);
 		}
@@ -488,19 +415,22 @@ public abstract class AbstractMethodMessageHandler<T>
 				HandlerMethod m1 = bestMatch.handlerMethod;
 				HandlerMethod m2 = secondBestMatch.handlerMethod;
 				throw new IllegalStateException("Ambiguous handler methods mapped for destination '" +
-						(destination != null ? destination.value() : "") + "': {" +
-						m1.getShortLogMessage() + ", " + m2.getShortLogMessage() + "}");
+						destination + "': {" + m1.getShortLogMessage() + ", " + m2.getShortLogMessage() + "}");
 			}
 		}
 		return bestMatch;
 	}
 
 	/**
-	 * Extract the destination from the given message.
+	 * Extract a String-based destination, if any, that can be used to perform
+	 * a direct look up into the registered mappings.
+	 * <p><strong>Note:</strong> This is completely optional. The mapping
+	 * metadata for a sub-class may support neither direct lookups, nor String
+	 * based destinations.
 	 * @see #getDirectLookupMappings(Object)
 	 */
 	@Nullable
-	protected abstract RouteMatcher.Route getDestination(Message<?> message);
+	protected abstract String getDestination(Message<?> message);
 
 	private void addMatchesToCollection(
 			Collection<T> mappingsToCheck, Message<?> message, List<Match<T>> matches) {
@@ -536,9 +466,8 @@ public abstract class AbstractMethodMessageHandler<T>
 	 * @param destination the destination
 	 * @param message the message
 	 */
-	protected void handleNoMatch(@Nullable RouteMatcher.Route destination, Message<?> message) {
-		logger.debug("No handlers for destination '" +
-				(destination != null ? destination.value() : "") + "'");
+	protected void handleNoMatch(@Nullable String destination, Message<?> message) {
+		logger.debug("No handlers for destination '" + destination + "'");
 	}
 
 	/**
@@ -561,10 +490,21 @@ public abstract class AbstractMethodMessageHandler<T>
 
 		private final HandlerMethod handlerMethod;
 
+
 		Match(T mapping, HandlerMethod handlerMethod) {
 			this.mapping = mapping;
 			this.handlerMethod = handlerMethod;
 		}
+
+
+		public T getMapping() {
+			return this.mapping;
+		}
+
+		public HandlerMethod getHandlerMethod() {
+			return this.handlerMethod;
+		}
+
 
 		@Override
 		public String toString() {
@@ -577,9 +517,11 @@ public abstract class AbstractMethodMessageHandler<T>
 
 		private final Comparator<T> comparator;
 
+
 		MatchComparator(Comparator<T> comparator) {
 			this.comparator = comparator;
 		}
+
 
 		@Override
 		public int compare(Match<T> match1, Match<T> match2) {

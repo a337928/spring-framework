@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -44,7 +44,6 @@ import org.springframework.lang.Nullable;
  * @author Rossen Stoyanchev
  * @author Dimitrios Liapis
  * @author Brian Clozel
- * @author Sam Brannen
  * @since 4.0
  */
 public abstract class MimeTypeUtils {
@@ -162,7 +161,7 @@ public abstract class MimeTypeUtils {
 
 
 	private static final ConcurrentLruCache<String, MimeType> cachedMimeTypes =
-			new ConcurrentLruCache<>(64, MimeTypeUtils::parseMimeTypeInternal);
+			new ConcurrentLruCache<>(32, MimeTypeUtils::parseMimeTypeInternal);
 
 	@Nullable
 	private static volatile Random random;
@@ -190,13 +189,14 @@ public abstract class MimeTypeUtils {
 	 * @throws InvalidMimeTypeException if the string cannot be parsed
 	 */
 	public static MimeType parseMimeType(String mimeType) {
-		if (!StringUtils.hasLength(mimeType)) {
-			throw new InvalidMimeTypeException(mimeType, "'mimeType' must not be empty");
-		}
 		return cachedMimeTypes.get(mimeType);
 	}
 
 	private static MimeType parseMimeTypeInternal(String mimeType) {
+		if (!StringUtils.hasLength(mimeType)) {
+			throw new InvalidMimeTypeException(mimeType, "'mimeType' must not be empty");
+		}
+
 		int index = mimeType.indexOf(';');
 		String fullType = (index >= 0 ? mimeType.substring(0, index) : mimeType).trim();
 		if (fullType.isEmpty()) {
@@ -274,10 +274,9 @@ public abstract class MimeTypeUtils {
 			return Collections.emptyList();
 		}
 		return tokenize(mimeTypes).stream()
-				.filter(StringUtils::hasText)
-				.map(MimeTypeUtils::parseMimeType)
-				.collect(Collectors.toList());
+				.map(MimeTypeUtils::parseMimeType).collect(Collectors.toList());
 	}
+
 
 	/**
 	 * Tokenize the given comma-separated string of {@code MimeType} objects
@@ -355,7 +354,7 @@ public abstract class MimeTypeUtils {
 	 * <blockquote>audio/basic == text/html</blockquote> <blockquote>audio/basic ==
 	 * audio/wave</blockquote>
 	 * @param mimeTypes the list of mime types to be sorted
-	 * @see <a href="https://tools.ietf.org/html/rfc7231#section-5.3.2">HTTP 1.1: Semantics
+	 * @see <a href="http://tools.ietf.org/html/rfc7231#section-5.3.2">HTTP 1.1: Semantics
 	 * and Content, section 5.3.2</a>
 	 */
 	public static void sortBySpecificity(List<MimeType> mimeTypes) {
@@ -434,13 +433,7 @@ public abstract class MimeTypeUtils {
 		public V get(K key) {
 			this.lock.readLock().lock();
 			try {
-				if (this.queue.size() < this.maxSize / 2) {
-					V cached = this.cache.get(key);
-					if (cached != null) {
-						return cached;
-					}
-				}
-				else if (this.queue.remove(key)) {
+				if (this.queue.remove(key)) {
 					this.queue.add(key);
 					return this.cache.get(key);
 				}
@@ -450,11 +443,6 @@ public abstract class MimeTypeUtils {
 			}
 			this.lock.writeLock().lock();
 			try {
-				// retrying in case of concurrent reads on the same key
-				if (this.queue.remove(key)) {
-					this.queue.add(key);
-					return this.cache.get(key);
-				}
 				if (this.queue.size() == this.maxSize) {
 					K leastUsed = this.queue.poll();
 					if (leastUsed != null) {

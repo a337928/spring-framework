@@ -1,11 +1,11 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,7 +19,7 @@ package org.springframework.web.reactive.function.server;
 import java.net.URI;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -29,8 +29,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.web.reactive.function.server.RequestPredicates.HEAD;
+import static org.junit.Assert.*;
 
 /**
  * @author Arjen Poutsma
@@ -42,35 +41,21 @@ public class RouterFunctionBuilderTests {
 		RouterFunction<ServerResponse> route = RouterFunctions.route()
 				.GET("/foo", request -> ServerResponse.ok().build())
 				.POST("/", RequestPredicates.contentType(MediaType.TEXT_PLAIN), request -> ServerResponse.noContent().build())
-				.route(HEAD("/foo"), request -> ServerResponse.accepted().build())
 				.build();
+		System.out.println(route);
 
-		MockServerRequest getFooRequest = MockServerRequest.builder().
+		MockServerRequest fooRequest = MockServerRequest.builder().
 				method(HttpMethod.GET).
 				uri(URI.create("http://localhost/foo"))
 				.build();
 
-		Mono<Integer> responseMono = route.route(getFooRequest)
-				.flatMap(handlerFunction -> handlerFunction.handle(getFooRequest))
+		Mono<Integer> responseMono = route.route(fooRequest)
+				.flatMap(handlerFunction -> handlerFunction.handle(fooRequest))
 				.map(ServerResponse::statusCode)
 				.map(HttpStatus::value);
 
 		StepVerifier.create(responseMono)
 				.expectNext(200)
-				.verifyComplete();
-
-		MockServerRequest headFooRequest = MockServerRequest.builder().
-				method(HttpMethod.HEAD).
-				uri(URI.create("http://localhost/foo"))
-				.build();
-
-		responseMono = route.route(headFooRequest)
-				.flatMap(handlerFunction -> handlerFunction.handle(getFooRequest))
-				.map(ServerResponse::statusCode)
-				.map(HttpStatus::value);
-
-		StepVerifier.create(responseMono)
-				.expectNext(202)
 				.verifyComplete();
 
 		MockServerRequest barRequest = MockServerRequest.builder().
@@ -106,7 +91,7 @@ public class RouterFunctionBuilderTests {
 	@Test
 	public void resources() {
 		Resource resource = new ClassPathResource("/org/springframework/web/reactive/function/server/");
-		assertThat(resource.exists()).isTrue();
+		assertTrue(resource.exists());
 
 		RouterFunction<ServerResponse> route = RouterFunctions.route()
 				.resources("/resources/**", resource)
@@ -174,20 +159,20 @@ public class RouterFunctionBuilderTests {
 				.GET("/bar", request -> Mono.error(new IllegalStateException()))
 				.before(request -> {
 					int count = filterCount.getAndIncrement();
-					assertThat(count).isEqualTo(0);
+					assertEquals(0, count);
 					return request;
 				})
 				.after((request, response) -> {
 					int count = filterCount.getAndIncrement();
-					assertThat(count).isEqualTo(3);
+					assertEquals(3, count);
 					return response;
 				})
 				.filter((request, next) -> {
 					int count = filterCount.getAndIncrement();
-					assertThat(count).isEqualTo(1);
+					assertEquals(1, count);
 					Mono<ServerResponse> responseMono = next.handle(request);
 					count = filterCount.getAndIncrement();
-					assertThat(count).isEqualTo(2);
+					assertEquals(2, count);
 					return responseMono;
 				})
 				.onError(IllegalStateException.class, (e, request) -> ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR).build())
@@ -203,8 +188,9 @@ public class RouterFunctionBuilderTests {
 
 
 		StepVerifier.create(fooResponseMono)
-				.consumeNextWith(serverResponse -> assertThat(filterCount.get()).isEqualTo(4)
-				)
+				.consumeNextWith(serverResponse -> {
+					assertEquals(4, filterCount.get());
+				})
 				.verifyComplete();
 
 		filterCount.set(0);

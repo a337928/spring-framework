@@ -1,11 +1,11 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -42,16 +42,18 @@ import org.springframework.lang.Nullable;
 public class ProtobufJsonFormatHttpMessageConverter extends ProtobufHttpMessageConverter {
 
 	/**
-	 * Constructor with default instances of {@link JsonFormat.Parser},
-	 * {@link JsonFormat.Printer}, and {@link ExtensionRegistry}.
+	 * Construct a new {@code ProtobufJsonFormatHttpMessageConverter} with default
+	 * {@code JsonFormat.Parser} and {@code JsonFormat.Printer} configuration.
 	 */
 	public ProtobufJsonFormatHttpMessageConverter() {
 		this(null,  null, (ExtensionRegistry)null);
 	}
 
 	/**
-	 * Constructor with given instances of {@link JsonFormat.Parser},
-	 * {@link JsonFormat.Printer}, and a default instance of {@link ExtensionRegistry}.
+	 * Construct a new {@code ProtobufJsonFormatHttpMessageConverter} with the given
+	 * {@code JsonFormat.Parser} and {@code JsonFormat.Printer} configuration.
+	 * @param parser the JSON parser configuration
+	 * @param printer the JSON printer configuration
 	 */
 	public ProtobufJsonFormatHttpMessageConverter(
 			@Nullable JsonFormat.Parser parser, @Nullable JsonFormat.Printer printer) {
@@ -60,8 +62,13 @@ public class ProtobufJsonFormatHttpMessageConverter extends ProtobufHttpMessageC
 	}
 
 	/**
-	 * Constructor with given instances of {@link JsonFormat.Parser},
-	 * {@link JsonFormat.Printer}, and {@link ExtensionRegistry}.
+	 * Construct a new {@code ProtobufJsonFormatHttpMessageConverter} with the given
+	 * {@code JsonFormat.Parser} and {@code JsonFormat.Printer} configuration, also
+	 * accepting a registry that specifies protocol message extensions.
+	 * @param parser the JSON parser configuration
+	 * @param printer the JSON printer configuration
+	 * @param extensionRegistry the registry to populate
+	 * @since 5.1
 	 */
 	public ProtobufJsonFormatHttpMessageConverter(@Nullable JsonFormat.Parser parser,
 			@Nullable JsonFormat.Printer printer, @Nullable ExtensionRegistry extensionRegistry) {

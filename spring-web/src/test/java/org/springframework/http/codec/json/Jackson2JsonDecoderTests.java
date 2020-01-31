@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,32 +28,27 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import org.springframework.core.ResolvableType;
+import org.springframework.core.codec.AbstractDecoderTestCase;
 import org.springframework.core.codec.CodecException;
 import org.springframework.core.codec.DecodingException;
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.testfixture.codec.AbstractDecoderTests;
 import org.springframework.http.MediaType;
-import org.springframework.http.codec.json.JacksonViewBean.MyJacksonView1;
-import org.springframework.http.codec.json.JacksonViewBean.MyJacksonView3;
+import org.springframework.http.codec.Pojo;
 import org.springframework.util.MimeType;
-import org.springframework.web.testfixture.xml.Pojo;
 
-import static java.util.Arrays.asList;
-import static java.util.Collections.emptyMap;
-import static java.util.Collections.singletonMap;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.springframework.core.ResolvableType.forClass;
-import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.http.MediaType.APPLICATION_STREAM_JSON;
-import static org.springframework.http.MediaType.APPLICATION_XML;
-import static org.springframework.http.codec.json.Jackson2CodecSupport.JSON_VIEW_HINT;
+import static java.util.Arrays.*;
+import static java.util.Collections.*;
+import static org.junit.Assert.*;
+import static org.springframework.core.ResolvableType.*;
+import static org.springframework.http.MediaType.*;
+import static org.springframework.http.codec.json.Jackson2JsonDecoder.*;
+import static org.springframework.http.codec.json.JacksonViewBean.*;
 
 /**
  * Unit tests for {@link Jackson2JsonDecoder}.
@@ -61,7 +56,7 @@ import static org.springframework.http.codec.json.Jackson2CodecSupport.JSON_VIEW
  * @author Sebastien Deleuze
  * @author Rossen Stoyanchev
  */
-public class Jackson2JsonDecoderTests extends AbstractDecoderTests<Jackson2JsonDecoder> {
+public class Jackson2JsonDecoderTests extends AbstractDecoderTestCase<Jackson2JsonDecoder> {
 
 	private Pojo pojo1 = new Pojo("f1", "b1");
 
@@ -76,12 +71,13 @@ public class Jackson2JsonDecoderTests extends AbstractDecoderTests<Jackson2JsonD
 	@Override
 	@Test
 	public void canDecode() {
-		assertThat(decoder.canDecode(forClass(Pojo.class), APPLICATION_JSON)).isTrue();
-		assertThat(decoder.canDecode(forClass(Pojo.class), APPLICATION_STREAM_JSON)).isTrue();
-		assertThat(decoder.canDecode(forClass(Pojo.class), null)).isTrue();
+		assertTrue(decoder.canDecode(forClass(Pojo.class), APPLICATION_JSON));
+		assertTrue(decoder.canDecode(forClass(Pojo.class), APPLICATION_JSON_UTF8));
+		assertTrue(decoder.canDecode(forClass(Pojo.class), APPLICATION_STREAM_JSON));
+		assertTrue(decoder.canDecode(forClass(Pojo.class), null));
 
-		assertThat(decoder.canDecode(forClass(String.class), null)).isFalse();
-		assertThat(decoder.canDecode(forClass(Pojo.class), APPLICATION_XML)).isFalse();
+		assertFalse(decoder.canDecode(forClass(String.class), null));
+		assertFalse(decoder.canDecode(forClass(Pojo.class), APPLICATION_XML));
 	}
 
 	@Test  // SPR-15866
@@ -89,16 +85,15 @@ public class Jackson2JsonDecoderTests extends AbstractDecoderTests<Jackson2JsonD
 		MimeType textJavascript = new MimeType("text", "javascript", StandardCharsets.UTF_8);
 		Jackson2JsonDecoder decoder = new Jackson2JsonDecoder(new ObjectMapper(), textJavascript);
 
-		assertThat(decoder.getDecodableMimeTypes()).isEqualTo(Collections.singletonList(textJavascript));
+		assertEquals(Collections.singletonList(textJavascript), decoder.getDecodableMimeTypes());
 	}
 
-	@Test
+	@Test(expected = UnsupportedOperationException.class)
 	public void decodableMimeTypesIsImmutable() {
 		MimeType textJavascript = new MimeType("text", "javascript", StandardCharsets.UTF_8);
 		Jackson2JsonDecoder decoder = new Jackson2JsonDecoder(new ObjectMapper(), textJavascript);
 
-		assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() ->
-				decoder.getMimeTypes().add(new MimeType("text", "ecmascript")));
+		decoder.getMimeTypes().add(new MimeType("text", "ecmascript"));
 	}
 
 	@Override
@@ -115,7 +110,6 @@ public class Jackson2JsonDecoderTests extends AbstractDecoderTests<Jackson2JsonD
 	}
 
 	@Override
-	@Test
 	public void decodeToMono() {
 		Flux<DataBuffer> input = Flux.concat(
 				stringBuffer("[{\"bar\":\"b1\",\"foo\":\"f1\"},"),
@@ -147,9 +141,9 @@ public class Jackson2JsonDecoderTests extends AbstractDecoderTests<Jackson2JsonD
 		testDecode(input, elementType, step -> step
 				.consumeNextWith(o -> {
 					JacksonViewBean b = (JacksonViewBean) o;
-					assertThat(b.getWithView1()).isEqualTo("with");
-					assertThat(b.getWithView2()).isNull();
-					assertThat(b.getWithoutView()).isNull();
+					assertEquals("with", b.getWithView1());
+					assertNull(b.getWithView2());
+					assertNull(b.getWithoutView());
 				}), null, hints);
 	}
 
@@ -163,9 +157,9 @@ public class Jackson2JsonDecoderTests extends AbstractDecoderTests<Jackson2JsonD
 		testDecode(input, elementType, step -> step
 				.consumeNextWith(o -> {
 					JacksonViewBean b = (JacksonViewBean) o;
-					assertThat(b.getWithoutView()).isEqualTo("without");
-					assertThat(b.getWithView1()).isNull();
-					assertThat(b.getWithView2()).isNull();
+					assertEquals("without", b.getWithoutView());
+					assertNull(b.getWithView1());
+					assertNull(b.getWithView2());
 				})
 				.verifyComplete(), null, hints);
 	}
@@ -200,7 +194,7 @@ public class Jackson2JsonDecoderTests extends AbstractDecoderTests<Jackson2JsonD
 		Mono<DataBuffer> input = stringBuffer("{\"test\": 1}");
 
 		testDecode(input, TestObject.class, step -> step
-				.consumeNextWith(o -> assertThat(o.getTest()).isEqualTo(1))
+				.consumeNextWith(o -> assertEquals(1, o.getTest()))
 				.verifyComplete()
 		);
 	}
@@ -215,7 +209,6 @@ public class Jackson2JsonDecoderTests extends AbstractDecoderTests<Jackson2JsonD
 	}
 
 
-	@SuppressWarnings("unused")
 	private static class BeanWithNoDefaultConstructor {
 
 		private final String property1;

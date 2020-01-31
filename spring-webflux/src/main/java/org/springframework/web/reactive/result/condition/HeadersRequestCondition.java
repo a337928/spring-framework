@@ -1,11 +1,11 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,6 +17,7 @@
 package org.springframework.web.reactive.result.condition;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -55,12 +56,12 @@ public final class HeadersRequestCondition extends AbstractRequestCondition<Head
 		this(parseExpressions(headers));
 	}
 
-	private HeadersRequestCondition(Set<HeaderExpression> conditions) {
-		this.expressions = conditions;
+	private HeadersRequestCondition(Collection<HeaderExpression> conditions) {
+		this.expressions = Collections.unmodifiableSet(new LinkedHashSet<>(conditions));
 	}
 
 
-	private static Set<HeaderExpression> parseExpressions(String... headers) {
+	private static Collection<HeaderExpression> parseExpressions(String... headers) {
 		Set<HeaderExpression> expressions = new LinkedHashSet<>();
 		if (headers != null) {
 			for (String header : headers) {
@@ -141,13 +142,7 @@ public final class HeadersRequestCondition extends AbstractRequestCondition<Head
 	}
 
 	private long getValueMatchCount(Set<HeaderExpression> expressions) {
-		long count = 0;
-		for (HeaderExpression e : expressions) {
-			if (e.getValue() != null && !e.isNegated()) {
-				count++;
-			}
-		}
-		return count;
+		return expressions.stream().filter(e -> e.getValue() != null && !e.isNegated()).count();
 	}
 
 

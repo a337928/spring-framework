@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * An {@link AsyncUncaughtExceptionHandler} implementation used for testing purposes.
@@ -59,9 +59,9 @@ class TestableAsyncUncaughtExceptionHandler
 	}
 
 	public void assertCalledWith(Method expectedMethod, Class<? extends Throwable> expectedExceptionType) {
-		assertThat(descriptor).as("Handler not called").isNotNull();
-		assertThat(descriptor.ex.getClass()).as("Wrong exception type").isEqualTo(expectedExceptionType);
-		assertThat(descriptor.method).as("Wrong method").isEqualTo(expectedMethod);
+		assertNotNull("Handler not called", descriptor);
+		assertEquals("Wrong exception type", expectedExceptionType, descriptor.ex.getClass());
+		assertEquals("Wrong method", expectedMethod, descriptor.method);
 	}
 
 	public void await(long timeout) {

@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,6 +15,8 @@
  */
 
 package org.springframework.context.annotation;
+
+import java.util.Objects;
 
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.lang.Nullable;
@@ -98,7 +100,7 @@ public interface DeferredImportSelector extends ImportSelector {
 			}
 
 			@Override
-			public boolean equals(@Nullable Object other) {
+			public boolean equals(Object other) {
 				if (this == other) {
 					return true;
 				}
@@ -106,17 +108,13 @@ public interface DeferredImportSelector extends ImportSelector {
 					return false;
 				}
 				Entry entry = (Entry) other;
-				return (this.metadata.equals(entry.metadata) && this.importClassName.equals(entry.importClassName));
+				return (Objects.equals(this.metadata, entry.metadata) &&
+						Objects.equals(this.importClassName, entry.importClassName));
 			}
 
 			@Override
 			public int hashCode() {
-				return (this.metadata.hashCode() * 31 + this.importClassName.hashCode());
-			}
-
-			@Override
-			public String toString() {
-				return this.importClassName;
+				return Objects.hash(this.metadata, this.importClassName);
 			}
 		}
 	}

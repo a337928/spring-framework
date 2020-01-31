@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,15 +16,17 @@
 
 package org.springframework.web.context.support;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.annotation.AnnotationBeanNameGenerator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 /**
  * @author Chris Beams
@@ -40,7 +42,7 @@ public class AnnotationConfigWebApplicationContextTests {
 		ctx.refresh();
 
 		TestBean bean = ctx.getBean(TestBean.class);
-		assertThat(bean).isNotNull();
+		assertNotNull(bean);
 	}
 
 	@Test
@@ -51,7 +53,7 @@ public class AnnotationConfigWebApplicationContextTests {
 		ctx.refresh();
 
 		TestBean bean = ctx.getBean(TestBean.class);
-		assertThat(bean).isNotNull();
+		assertNotNull(bean);
 	}
 
 	@Test
@@ -62,7 +64,7 @@ public class AnnotationConfigWebApplicationContextTests {
 		ctx.refresh();
 
 		TestBean bean = ctx.getBean(TestBean.class);
-		assertThat(bean).isNotNull();
+		assertNotNull(bean);
 	}
 
 	@Test
@@ -78,7 +80,55 @@ public class AnnotationConfigWebApplicationContextTests {
 		});
 		ctx.setConfigLocation(Config.class.getName());
 		ctx.refresh();
-		assertThat(ctx.containsBean("custom-myConfig")).isTrue();
+		assertThat(ctx.containsBean("custom-myConfig"), is(true));
+	}
+
+	@Test
+	@SuppressWarnings("resource")
+	public void registerBean() {
+		AnnotationConfigWebApplicationContext ctx = new AnnotationConfigWebApplicationContext();
+		ctx.registerBean(TestBean.class);
+		ctx.refresh();
+
+		assertTrue(ctx.getBeanFactory().containsSingleton("annotationConfigWebApplicationContextTests.TestBean"));
+		TestBean bean = ctx.getBean(TestBean.class);
+		assertNotNull(bean);
+	}
+
+	@Test
+	@SuppressWarnings("resource")
+	public void registerBeanWithLazy() {
+		AnnotationConfigWebApplicationContext ctx = new AnnotationConfigWebApplicationContext();
+		ctx.registerBean(TestBean.class, Lazy.class);
+		ctx.refresh();
+
+		assertFalse(ctx.getBeanFactory().containsSingleton("annotationConfigWebApplicationContextTests.TestBean"));
+		TestBean bean = ctx.getBean(TestBean.class);
+		assertNotNull(bean);
+	}
+
+	@Test
+	@SuppressWarnings("resource")
+	public void registerBeanWithSupplier() {
+		AnnotationConfigWebApplicationContext ctx = new AnnotationConfigWebApplicationContext();
+		ctx.registerBean(TestBean.class, TestBean::new);
+		ctx.refresh();
+
+		assertTrue(ctx.getBeanFactory().containsSingleton("annotationConfigWebApplicationContextTests.TestBean"));
+		TestBean bean = ctx.getBean(TestBean.class);
+		assertNotNull(bean);
+	}
+
+	@Test
+	@SuppressWarnings("resource")
+	public void registerBeanWithSupplierAndLazy() {
+		AnnotationConfigWebApplicationContext ctx = new AnnotationConfigWebApplicationContext();
+		ctx.registerBean(TestBean.class, TestBean::new, Lazy.class);
+		ctx.refresh();
+
+		assertFalse(ctx.getBeanFactory().containsSingleton("annotationConfigWebApplicationContextTests.TestBean"));
+		TestBean bean = ctx.getBean(TestBean.class);
+		assertNotNull(bean);
 	}
 
 

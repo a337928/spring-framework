@@ -1,11 +1,11 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,7 +19,6 @@ package org.springframework.web.filter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
-
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -27,7 +26,6 @@ import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.util.Assert;
 import org.springframework.util.DigestUtils;
@@ -54,6 +52,12 @@ import org.springframework.web.util.WebUtils;
  * @since 3.0
  */
 public class ShallowEtagHeaderFilter extends OncePerRequestFilter {
+
+	private static final String HEADER_ETAG = "ETag";
+
+	private static final String HEADER_IF_NONE_MATCH = "If-None-Match";
+
+	private static final String HEADER_CACHE_CONTROL = "Cache-Control";
 
 	private static final String DIRECTIVE_NO_STORE = "no-store";
 
@@ -113,15 +117,15 @@ public class ShallowEtagHeaderFilter extends OncePerRequestFilter {
 				WebUtils.getNativeResponse(response, ContentCachingResponseWrapper.class);
 		Assert.notNull(responseWrapper, "ContentCachingResponseWrapper not found");
 		HttpServletResponse rawResponse = (HttpServletResponse) responseWrapper.getResponse();
-		int statusCode = responseWrapper.getStatus();
+		int statusCode = responseWrapper.getStatusCode();
 
 		if (rawResponse.isCommitted()) {
 			responseWrapper.copyBodyToResponse();
 		}
 		else if (isEligibleForEtag(request, responseWrapper, statusCode, responseWrapper.getContentInputStream())) {
 			String responseETag = generateETagHeaderValue(responseWrapper.getContentInputStream(), this.writeWeakETag);
-			rawResponse.setHeader(HttpHeaders.ETAG, responseETag);
-			String requestETag = request.getHeader(HttpHeaders.IF_NONE_MATCH);
+			rawResponse.setHeader(HEADER_ETAG, responseETag);
+			String requestETag = request.getHeader(HEADER_IF_NONE_MATCH);
 			if (requestETag != null && ("*".equals(requestETag) || compareETagHeaderValue(requestETag, responseETag))) {
 				rawResponse.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
 			}
@@ -153,7 +157,7 @@ public class ShallowEtagHeaderFilter extends OncePerRequestFilter {
 
 		String method = request.getMethod();
 		if (responseStatusCode >= 200 && responseStatusCode < 300 && HttpMethod.GET.matches(method)) {
-			String cacheControl = response.getHeader(HttpHeaders.CACHE_CONTROL);
+			String cacheControl = response.getHeader(HEADER_CACHE_CONTROL);
 			return (cacheControl == null || !cacheControl.contains(DIRECTIVE_NO_STORE));
 		}
 		return false;

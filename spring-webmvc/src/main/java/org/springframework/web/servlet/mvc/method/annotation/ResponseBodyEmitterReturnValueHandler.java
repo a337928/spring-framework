@@ -1,11 +1,11 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.function.Consumer;
-
 import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -78,17 +77,17 @@ public class ResponseBodyEmitterReturnValueHandler implements HandlerMethodRetur
 	/**
 	 * Complete constructor with pluggable "reactive" type support.
 	 * @param messageConverters converters to write emitted objects with
-	 * @param registry for reactive return value type support
+	 * @param reactiveRegistry for reactive return value type support
 	 * @param executor for blocking I/O writes of items emitted from reactive types
 	 * @param manager for detecting streaming media types
 	 * @since 5.0
 	 */
 	public ResponseBodyEmitterReturnValueHandler(List<HttpMessageConverter<?>> messageConverters,
-			ReactiveAdapterRegistry registry, TaskExecutor executor, ContentNegotiationManager manager) {
+			ReactiveAdapterRegistry reactiveRegistry, TaskExecutor executor, ContentNegotiationManager manager) {
 
 		Assert.notEmpty(messageConverters, "HttpMessageConverter List must not be empty");
 		this.messageConverters = messageConverters;
-		this.reactiveHandler = new ReactiveTypeHandler(registry, executor, manager);
+		this.reactiveHandler = new ReactiveTypeHandler(reactiveRegistry, executor, manager);
 	}
 
 
@@ -153,8 +152,9 @@ public class ResponseBodyEmitterReturnValueHandler implements HandlerMethodRetur
 		// At this point we know we're streaming..
 		ShallowEtagHeaderFilter.disableContentCaching(request);
 
-		// Wrap the response to ignore further header changes
-		// Headers will be flushed at the first write
+		// Commit the response and wrap to ignore further header changes
+		outputMessage.getBody();
+		outputMessage.flush();
 		outputMessage = new StreamingServletServerHttpResponse(outputMessage);
 
 		DeferredResult<?> deferredResult = new DeferredResult<>(emitter.getTimeout());
@@ -198,13 +198,7 @@ public class ResponseBodyEmitterReturnValueHandler implements HandlerMethodRetur
 
 		@Override
 		public void complete() {
-			try {
-				this.outputMessage.flush();
-				this.deferredResult.setResult(null);
-			}
-			catch (IOException ex) {
-				this.deferredResult.setErrorResult(ex);
-			}
+			this.deferredResult.setResult(null);
 		}
 
 		@Override

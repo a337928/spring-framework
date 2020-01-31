@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -255,7 +254,7 @@ public class DispatcherServlet extends FrameworkServlet {
 	public static final String FLASH_MAP_MANAGER_ATTRIBUTE = DispatcherServlet.class.getName() + ".FLASH_MAP_MANAGER";
 
 	/**
-	 * Name of request attribute that exposes an Exception resolved with a
+	 * Name of request attribute that exposes an Exception resolved with an
 	 * {@link HandlerExceptionResolver} but where no view was rendered
 	 * (e.g. setting the status code).
 	 */
@@ -964,12 +963,11 @@ public class DispatcherServlet extends FrameworkServlet {
 				params = (request.getParameterMap().isEmpty() ? "" : "masked");
 			}
 
-			String queryString = request.getQueryString();
-			String queryClause = (StringUtils.hasLength(queryString) ? "?" + queryString : "");
+			String query = StringUtils.isEmpty(request.getQueryString()) ? "" : "?" + request.getQueryString();
 			String dispatchType = (!request.getDispatcherType().equals(DispatcherType.REQUEST) ?
 					"\"" + request.getDispatcherType().name() + "\" dispatch for " : "");
 			String message = (dispatchType + request.getMethod() + " \"" + getRequestUri(request) +
-					queryClause + "\", parameters={" + params + "}");
+					query + "\", parameters={" + params + "}");
 
 			if (traceOn) {
 				List<String> values = Collections.list(request.getHeaderNames());
@@ -1132,7 +1130,6 @@ public class DispatcherServlet extends FrameworkServlet {
 		}
 
 		if (mappedHandler != null) {
-			// Exception (if any) is already handled..
 			mappedHandler.triggerAfterCompletion(request, response, null);
 		}
 	}
@@ -1318,7 +1315,7 @@ public class DispatcherServlet extends FrameworkServlet {
 			if (logger.isTraceEnabled()) {
 				logger.trace("Using resolved error view: " + exMv, ex);
 			}
-			else if (logger.isDebugEnabled()) {
+			if (logger.isDebugEnabled()) {
 				logger.debug("Using resolved error view: " + exMv);
 			}
 			WebUtils.exposeErrorRequestAttributes(request, ex, getServletName());

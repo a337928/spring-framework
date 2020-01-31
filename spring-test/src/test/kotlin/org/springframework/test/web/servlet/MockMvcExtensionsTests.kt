@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,16 +16,16 @@
 
 package org.springframework.test.web.servlet
 
-import org.assertj.core.api.Assertions.*
 import org.hamcrest.CoreMatchers
-import org.junit.jupiter.api.Test
+import org.junit.Assert
+import org.junit.Test
+import org.junit.jupiter.api.assertThrows
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.*
 import org.springframework.test.web.Person
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.web.bind.annotation.*
-import reactor.core.publisher.Mono
 import java.security.Principal
 import java.util.*
 
@@ -51,7 +51,7 @@ class MockMvcExtensionsTests {
 			principal = Principal { "foo" }
 		}.andExpect {
 			status { isOk }
-			content { contentType(APPLICATION_JSON) }
+			content { contentType(APPLICATION_JSON_UTF8) }
 			jsonPath("$.name") { value("Lee") }
 			content { json("""{"someBoolean": false}""", false) }
 		}.andDo {
@@ -81,22 +81,22 @@ class MockMvcExtensionsTests {
 		}.andDo {
 			handle(handler)
 		}
-		assertThat(matcherInvoked).isTrue()
-		assertThat(handlerInvoked).isTrue()
+		Assert.assertTrue(matcherInvoked)
+		Assert.assertTrue(handlerInvoked)
 	}
 
 	@Test
 	fun get() {
 		mockMvc.get("/person/{name}", "Lee") {
 				secure = true
-				accept = APPLICATION_JSON
+				accept = APPLICATION_JSON_UTF8
 				headers {
 					contentLanguage = Locale.FRANCE
 				}
 				principal = Principal { "foo" }
 		}.andExpect {
 			status { isOk }
-			content { contentType(APPLICATION_JSON) }
+			content { contentType(APPLICATION_JSON_UTF8) }
 			jsonPath("$.name") { value("Lee") }
 			content { json("""{"someBoolean": false}""", false) }
 		}.andDo {
@@ -125,20 +125,21 @@ class MockMvcExtensionsTests {
 		mockMvc.get("/person/$name") {
 			accept = APPLICATION_JSON
 		}.andExpect {
-			assertThatExceptionOfType(AssertionError::class.java).isThrownBy { content { contentType(APPLICATION_ATOM_XML) } }
-			assertThatExceptionOfType(AssertionError::class.java).isThrownBy { content { string("Wrong") } }
-			assertThatExceptionOfType(AssertionError::class.java).isThrownBy { jsonPath("name", CoreMatchers.`is`("Wrong")) }
-			assertThatExceptionOfType(AssertionError::class.java).isThrownBy { content { json("""{"name":"wrong"}""") } }
-			assertThatExceptionOfType(AssertionError::class.java).isThrownBy { jsonPath("name") { value("wrong") } }
-			assertThatExceptionOfType(AssertionError::class.java).isThrownBy { cookie { value("name", "wrong") } }
-			assertThatExceptionOfType(AssertionError::class.java).isThrownBy { flash { attribute("name", "wrong") } }
-			assertThatExceptionOfType(AssertionError::class.java).isThrownBy { header { stringValues("name", "wrong") } }
-			assertThatExceptionOfType(AssertionError::class.java).isThrownBy { model { attributeExists("name", "wrong") } }
-			assertThatExceptionOfType(AssertionError::class.java).isThrownBy { redirectedUrl("wrong/Url") }
-			assertThatExceptionOfType(AssertionError::class.java).isThrownBy { redirectedUrlPattern("wrong/Url") }
-			assertThatExceptionOfType(AssertionError::class.java).isThrownBy { status { isAccepted } }
-			assertThatExceptionOfType(AssertionError::class.java).isThrownBy { view { name("wrongName") } }
-			assertThatExceptionOfType(AssertionError::class.java).isThrownBy { jsonPath("name") { value("wrong") } }
+			assertThrows<AssertionError> { content { contentType(APPLICATION_ATOM_XML) } }
+			assertThrows<AssertionError> { content { string("Wrong") } }
+			assertThrows<AssertionError> { jsonPath("name", CoreMatchers.`is`("Wrong")) }
+			assertThrows<AssertionError> { content { json("""{"name":"wrong"}""") } }
+			assertThrows<AssertionError> { jsonPath("name") { value("wrong") } }
+			assertThrows<AssertionError> { cookie { value("name", "wrong") } }
+			assertThrows<AssertionError> { flash { attribute<String>("name", "wrong") } }
+			assertThrows<AssertionError> { header { stringValues("name", "wrong") } }
+			assertThrows<AssertionError> { model { attributeExists("name", "wrong") } }
+			assertThrows<AssertionError> { redirectedUrl("wrong/Url") }
+			assertThrows<AssertionError> { redirectedUrlPattern("wrong/Url") }
+			assertThrows<AssertionError> { redirectedUrlPattern("wrong/Url") }
+			assertThrows<AssertionError> { status { isAccepted } }
+			assertThrows<AssertionError> { view { name("wrongName") } }
+			assertThrows<AssertionError> { jsonPath("name") { value("wrong") } }
 		}
 	}
 
@@ -148,16 +149,9 @@ class MockMvcExtensionsTests {
 			accept = APPLICATION_XML
 		}.andExpect {
 			status { isOk }
-			assertThatExceptionOfType(AssertionError::class.java).isThrownBy { xpath("//wrong") { nodeCount(1) } }
+			assertThrows<AssertionError> { xpath("//wrong") { nodeCount(1) } }
 		}.andDo {
 			print()
-		}
-	}
-
-	@Test
-	fun asyncDispatch() {
-		mockMvc.get("/async").asyncDispatch().andExpect {
-			status { isOk }
 		}
 	}
 
@@ -174,10 +168,5 @@ class MockMvcExtensionsTests {
 		@PostMapping("/person")
 		@ResponseStatus(HttpStatus.CREATED)
 		fun post(@RequestBody person: Person) {}
-
-		@GetMapping("/async")
-		fun getAsync(): Mono<Person> {
-			return Mono.just(Person("foo"))
-		}
 	}
 }

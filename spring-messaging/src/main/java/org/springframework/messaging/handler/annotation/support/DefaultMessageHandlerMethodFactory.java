@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -100,7 +100,7 @@ public class DefaultMessageHandlerMethodFactory
 	/**
 	 * Set the Validator instance used for validating {@code @Payload} arguments.
 	 * @see org.springframework.validation.annotation.Validated
-	 * @see PayloadMethodArgumentResolver
+	 * @see org.springframework.messaging.handler.annotation.support.PayloadArgumentResolver
 	 */
 	public void setValidator(Validator validator) {
 		this.validator = validator;
@@ -173,7 +173,7 @@ public class DefaultMessageHandlerMethodFactory
 		}
 
 		Assert.notNull(this.messageConverter, "MessageConverter not configured");
-		resolvers.add(new PayloadMethodArgumentResolver(this.messageConverter, this.validator));
+		resolvers.add(new PayloadArgumentResolver(this.messageConverter, this.validator));
 
 		return resolvers;
 	}

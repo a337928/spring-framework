@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,7 +19,7 @@ package org.springframework.messaging.handler.annotation.support;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import org.springframework.core.MethodParameter;
 import org.springframework.core.convert.support.DefaultConversionService;
@@ -29,9 +29,8 @@ import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.invocation.ResolvableMethod;
 import org.springframework.messaging.support.MessageBuilder;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.springframework.messaging.handler.annotation.MessagingPredicates.destinationVar;
+import static org.junit.Assert.*;
+import static org.springframework.messaging.handler.annotation.MessagingPredicates.*;
 
 /**
  * Test fixture for {@link DestinationVariableMethodArgumentResolver} tests.
@@ -49,8 +48,8 @@ public class DestinationVariableMethodArgumentResolverTests {
 
 	@Test
 	public void supportsParameter() {
-		assertThat(resolver.supportsParameter(this.resolvable.annot(destinationVar().noValue()).arg())).isTrue();
-		assertThat(resolver.supportsParameter(this.resolvable.annotNotPresent(DestinationVariable.class).arg())).isFalse();
+		assertTrue(resolver.supportsParameter(this.resolvable.annot(destinationVar().noValue()).arg()));
+		assertFalse(resolver.supportsParameter(this.resolvable.annotNotPresent(DestinationVariable.class).arg()));
 	}
 
 	@Test
@@ -65,18 +64,17 @@ public class DestinationVariableMethodArgumentResolverTests {
 
 		MethodParameter param = this.resolvable.annot(destinationVar().noValue()).arg();
 		Object result = this.resolver.resolveArgument(param, message);
-		assertThat(result).isEqualTo("bar");
+		assertEquals("bar", result);
 
 		param = this.resolvable.annot(destinationVar("name")).arg();
 		result = this.resolver.resolveArgument(param, message);
-		assertThat(result).isEqualTo("value");
+		assertEquals("value", result);
 	}
 
-	@Test
+	@Test(expected = MessageHandlingException.class)
 	public void resolveArgumentNotFound() throws Exception {
 		Message<byte[]> message = MessageBuilder.withPayload(new byte[0]).build();
-		assertThatExceptionOfType(MessageHandlingException.class).isThrownBy(() ->
-				this.resolver.resolveArgument(this.resolvable.annot(destinationVar().noValue()).arg(), message));
+		this.resolver.resolveArgument(this.resolvable.annot(destinationVar().noValue()).arg(), message);
 	}
 
 	@SuppressWarnings("unused")

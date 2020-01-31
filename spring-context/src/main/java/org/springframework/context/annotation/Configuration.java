@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -352,8 +352,7 @@ import org.springframework.stereotype.Component;
  *
  * <p>The Spring <em>TestContext framework</em> available in the {@code spring-test} module
  * provides the {@code @ContextConfiguration} annotation which can accept an array of
- * <em>component class</em> references &mdash; typically {@code @Configuration} or
- * {@code @Component} classes.
+ * {@code @Configuration} {@code Class} objects:
  *
  * <pre class="code">
  * &#064;RunWith(SpringRunner.class)
@@ -434,7 +433,7 @@ public @interface Configuration {
 	 * is registered as a traditional XML bean definition, the name/id of the bean
 	 * element will take precedence.
 	 * @return the explicit component name, if any (or empty String otherwise)
-	 * @see AnnotationBeanNameGenerator
+	 * @see org.springframework.beans.factory.support.DefaultBeanNameGenerator
 	 */
 	@AliasFor(annotation = Component.class)
 	String value() default "";

@@ -1,11 +1,11 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,7 +18,8 @@ package org.springframework.test.context.transaction;
 
 import javax.sql.DataSource;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -30,14 +31,15 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.jdbc.JdbcTestUtils;
+import org.springframework.test.transaction.TransactionTestUtils;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.transaction.TransactionAssert.assertThatTransaction;
+import static org.junit.Assert.*;
 
 /**
  * Integration tests that ensure that <em>primary</em> transaction managers
@@ -47,32 +49,34 @@ import static org.springframework.test.transaction.TransactionAssert.assertThatT
  * @since 4.3
  * @see org.springframework.test.context.jdbc.PrimaryDataSourceTests
  */
-@SpringJUnitConfig
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration
 @DirtiesContext
-final class PrimaryTransactionManagerTests {
+public final class PrimaryTransactionManagerTests {
 
 	private JdbcTemplate jdbcTemplate;
 
 
 	@Autowired
-	void setDataSource(DataSource dataSource1) {
+	public void setDataSource(DataSource dataSource1) {
 		this.jdbcTemplate = new JdbcTemplate(dataSource1);
 	}
 
+
 	@BeforeTransaction
-	void beforeTransaction() {
+	public void beforeTransaction() {
 		assertNumUsers(0);
 	}
 
 	@AfterTransaction
-	void afterTransaction() {
+	public void afterTransaction() {
 		assertNumUsers(0);
 	}
 
 	@Test
 	@Transactional
-	void transactionalTest() {
-		assertThatTransaction().isActive();
+	public void transactionalTest() {
+		TransactionTestUtils.assertInTransaction(true);
 
 		ClassPathResource resource = new ClassPathResource("/org/springframework/test/context/jdbc/data.sql");
 		new ResourceDatabasePopulator(resource).execute(jdbcTemplate.getDataSource());
@@ -81,7 +85,8 @@ final class PrimaryTransactionManagerTests {
 	}
 
 	private void assertNumUsers(int expected) {
-		assertThat(JdbcTestUtils.countRowsInTable(this.jdbcTemplate, "user")).as("Number of rows in the 'user' table").isEqualTo(expected);
+		assertEquals("Number of rows in the 'user' table", expected,
+				JdbcTestUtils.countRowsInTable(this.jdbcTemplate, "user"));
 	}
 
 
@@ -91,17 +96,17 @@ final class PrimaryTransactionManagerTests {
 
 		@Primary
 		@Bean
-		PlatformTransactionManager primaryTransactionManager() {
+		public PlatformTransactionManager primaryTransactionManager() {
 			return new DataSourceTransactionManager(dataSource1());
 		}
 
 		@Bean
-		PlatformTransactionManager additionalTransactionManager() {
+		public PlatformTransactionManager additionalTransactionManager() {
 			return new DataSourceTransactionManager(dataSource2());
 		}
 
 		@Bean
-		DataSource dataSource1() {
+		public DataSource dataSource1() {
 			return new EmbeddedDatabaseBuilder()
 					.generateUniqueName(true)
 					.addScript("classpath:/org/springframework/test/context/jdbc/schema.sql")
@@ -109,7 +114,7 @@ final class PrimaryTransactionManagerTests {
 		}
 
 		@Bean
-		DataSource dataSource2() {
+		public DataSource dataSource2() {
 			return new EmbeddedDatabaseBuilder().generateUniqueName(true).build();
 		}
 	}

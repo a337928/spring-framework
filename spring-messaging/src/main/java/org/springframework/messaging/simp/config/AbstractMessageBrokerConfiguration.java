@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,7 +28,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.SmartApplicationListener;
-import org.springframework.core.task.TaskExecutor;
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.MessageHandler;
 import org.springframework.messaging.converter.ByteArrayMessageConverter;
@@ -54,7 +53,6 @@ import org.springframework.messaging.simp.user.UserRegistryMessageHandler;
 import org.springframework.messaging.support.AbstractSubscribableChannel;
 import org.springframework.messaging.support.ExecutorSubscribableChannel;
 import org.springframework.messaging.support.ImmutableMessageChannelInterceptor;
-import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.util.Assert;
@@ -140,7 +138,7 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 	}
 
 	@Bean
-	public TaskExecutor clientInboundChannelExecutor() {
+	public ThreadPoolTaskExecutor clientInboundChannelExecutor() {
 		TaskExecutorRegistration reg = getClientInboundChannelRegistration().taskExecutor();
 		ThreadPoolTaskExecutor executor = reg.getTaskExecutor();
 		executor.setThreadNamePrefix("clientInboundChannel-");
@@ -176,7 +174,7 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 	}
 
 	@Bean
-	public TaskExecutor clientOutboundChannelExecutor() {
+	public ThreadPoolTaskExecutor clientOutboundChannelExecutor() {
 		TaskExecutorRegistration reg = getClientOutboundChannelRegistration().taskExecutor();
 		ThreadPoolTaskExecutor executor = reg.getTaskExecutor();
 		executor.setThreadNamePrefix("clientOutboundChannel-");
@@ -212,7 +210,7 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 	}
 
 	@Bean
-	public TaskExecutor brokerChannelExecutor() {
+	public ThreadPoolTaskExecutor brokerChannelExecutor() {
 		ChannelRegistration reg = getBrokerRegistry().getBrokerChannelRegistration();
 		ThreadPoolTaskExecutor executor;
 		if (reg.hasTaskExecutor()) {
@@ -362,7 +360,7 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 
 	// Expose alias for 4.1 compatibility
 	@Bean(name = {"messageBrokerTaskScheduler", "messageBrokerSockJsTaskScheduler"})
-	public TaskScheduler messageBrokerTaskScheduler() {
+	public ThreadPoolTaskScheduler messageBrokerTaskScheduler() {
 		ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
 		scheduler.setThreadNamePrefix("MessageBroker-");
 		scheduler.setPoolSize(Runtime.getRuntime().availableProcessors());

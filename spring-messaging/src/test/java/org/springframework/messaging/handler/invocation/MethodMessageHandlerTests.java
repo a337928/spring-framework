@@ -1,11 +1,11 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -26,8 +26,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.hamcrest.Matchers;
+import org.junit.Before;
+import org.junit.Test;
 
 import org.springframework.context.support.StaticApplicationContext;
 import org.springframework.messaging.Message;
@@ -40,8 +41,7 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.util.Assert;
 import org.springframework.util.PathMatcher;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.junit.Assert.*;
 
 /**
  * Test fixture for
@@ -59,7 +59,7 @@ public class MethodMessageHandlerTests {
 	private TestController testController;
 
 
-	@BeforeEach
+	@Before
 	public void setup() {
 
 		List<String> destinationPrefixes = Arrays.asList("/test");
@@ -73,10 +73,9 @@ public class MethodMessageHandlerTests {
 		this.messageHandler.registerHandler(this.testController);
 	}
 
-	@Test
+	@Test(expected = IllegalStateException.class)
 	public void duplicateMapping() {
-		assertThatIllegalStateException().isThrownBy(() ->
-				this.messageHandler.registerHandler(new DuplicateMappingsController()));
+		this.messageHandler.registerHandler(new DuplicateMappingsController());
 	}
 
 	@Test
@@ -84,8 +83,8 @@ public class MethodMessageHandlerTests {
 
 		Map<String, HandlerMethod> handlerMethods = this.messageHandler.getHandlerMethods();
 
-		assertThat(handlerMethods).isNotNull();
-		assertThat(handlerMethods).hasSize(3);
+		assertNotNull(handlerMethods);
+		assertThat(handlerMethods.keySet(), Matchers.hasSize(3));
 	}
 
 	@Test
@@ -96,7 +95,7 @@ public class MethodMessageHandlerTests {
 
 		this.messageHandler.handleMessage(toDestination("/test/handlerPathMatchFoo"));
 
-		assertThat(this.testController.method).isEqualTo("pathMatchWildcard");
+		assertEquals("pathMatchWildcard", this.testController.method);
 	}
 
 	@Test
@@ -110,7 +109,7 @@ public class MethodMessageHandlerTests {
 
 		this.messageHandler.handleMessage(toDestination("/test/bestmatch/bar/path"));
 
-		assertThat(this.testController.method).isEqualTo("bestMatch");
+		assertEquals("bestMatch", this.testController.method);
 	}
 
 	@Test
@@ -118,8 +117,8 @@ public class MethodMessageHandlerTests {
 
 		this.messageHandler.handleMessage(toDestination("/test/handlerArgumentResolver"));
 
-		assertThat(this.testController.method).isEqualTo("handlerArgumentResolver");
-		assertThat(this.testController.arguments.get("message")).isNotNull();
+		assertEquals("handlerArgumentResolver", this.testController.method);
+		assertNotNull(this.testController.arguments.get("message"));
 	}
 
 	@Test
@@ -127,8 +126,8 @@ public class MethodMessageHandlerTests {
 
 		this.messageHandler.handleMessage(toDestination("/test/handlerThrowsExc"));
 
-		assertThat(this.testController.method).isEqualTo("illegalStateException");
-		assertThat(this.testController.arguments.get("exception")).isNotNull();
+		assertEquals("illegalStateException", this.testController.method);
+		assertNotNull(this.testController.arguments.get("exception"));
 	}
 
 	private Message<?> toDestination(String destination) {
@@ -190,7 +189,6 @@ public class MethodMessageHandlerTests {
 			super.detectHandlerMethods(handler);
 		}
 
-		@Override
 		public void registerHandlerMethod(Object handler, Method method, String mapping) {
 			super.registerHandlerMethod(handler, method, mapping);
 		}

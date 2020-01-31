@@ -1,11 +1,11 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -70,6 +70,8 @@ public class ReactorNettyTcpClient<P> implements TcpOperations<P> {
 
 	private static final int PUBLISH_ON_BUFFER_SIZE = 16;
 
+	private Log logger = LogFactory.getLog(ReactorNettyTcpClient.class);
+
 
 	private final TcpClient tcpClient;
 
@@ -79,14 +81,12 @@ public class ReactorNettyTcpClient<P> implements TcpOperations<P> {
 	private final ChannelGroup channelGroup;
 
 	@Nullable
-	private final LoopResources loopResources;
+	private LoopResources loopResources;
 
 	@Nullable
-	private final ConnectionProvider poolResources;
+	private ConnectionProvider poolResources;
 
 	private final Scheduler scheduler = Schedulers.newParallel("tcp-client-scheduler");
-
-	private Log logger = LogFactory.getLog(ReactorNettyTcpClient.class);
 
 	private volatile boolean stopping = false;
 

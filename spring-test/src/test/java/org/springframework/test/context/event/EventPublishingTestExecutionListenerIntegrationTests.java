@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,9 +23,11 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.After;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
 
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 import org.springframework.context.annotation.Bean;
@@ -39,6 +41,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestContext;
 import org.springframework.test.context.TestContextManager;
 import org.springframework.test.context.TestExecutionListener;
+import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.event.annotation.AfterTestClass;
 import org.springframework.test.context.event.annotation.AfterTestExecution;
 import org.springframework.test.context.event.annotation.AfterTestMethod;
@@ -46,13 +49,14 @@ import org.springframework.test.context.event.annotation.BeforeTestClass;
 import org.springframework.test.context.event.annotation.BeforeTestExecution;
 import org.springframework.test.context.event.annotation.BeforeTestMethod;
 import org.springframework.test.context.event.annotation.PrepareTestInstance;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.util.ReflectionUtils;
 
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.startsWith;
+import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.only;
@@ -74,16 +78,15 @@ public class EventPublishingTestExecutionListenerIntegrationTests {
 
 	private final TestContextManager testContextManager = new TestContextManager(ExampleTestCase.class);
 	private final TestContext testContext = testContextManager.getTestContext();
-	// Note that the following invocation of getApplicationContext() forces eager
-	// loading of the test's ApplicationContext which consequently results in the
-	// publication of all test execution events. Otherwise, TestContext#publishEvent
-	// would never fire any events for ExampleTestCase.
 	private final TestExecutionListener listener = testContext.getApplicationContext().getBean(TestExecutionListener.class);
 	private final Object testInstance = new ExampleTestCase();
-	private final Method traceableTestMethod = ReflectionUtils.findMethod(ExampleTestCase.class, "traceableTest");
+	private final Method testMethod = ReflectionUtils.findMethod(ExampleTestCase.class, "traceableTest");
+
+	@Rule
+	public final ExpectedException exception = ExpectedException.none();
 
 
-	@AfterEach
+	@After
 	public void closeApplicationContext() {
 		this.testContext.markApplicationContextDirty(null);
 	}
@@ -102,7 +105,7 @@ public class EventPublishingTestExecutionListenerIntegrationTests {
 
 	@Test
 	public void beforeTestMethodAnnotation() throws Exception {
-		testContextManager.beforeTestMethod(testInstance, traceableTestMethod);
+		testContextManager.beforeTestMethod(testInstance, testMethod);
 		verify(listener, only()).beforeTestMethod(testContext);
 	}
 
@@ -126,10 +129,16 @@ public class EventPublishingTestExecutionListenerIntegrationTests {
 	@Test
 	public void beforeTestMethodAnnotationWithFailingEventListener() throws Exception {
 		Method method = ReflectionUtils.findMethod(ExampleTestCase.class, "testWithFailingEventListener");
-		assertThatExceptionOfType(RuntimeException.class).isThrownBy(() ->
-				testContextManager.beforeTestMethod(testInstance, method))
-			.withMessageContaining("Boom!");
-		verify(listener, only()).beforeTestMethod(testContext);
+
+		exception.expect(RuntimeException.class);
+		exception.expectMessage("Boom!");
+
+		try {
+			testContextManager.beforeTestMethod(testInstance, method);
+		}
+		finally {
+			verify(listener, only()).beforeTestMethod(testContext);
+		}
 	}
 
 	/**
@@ -145,28 +154,28 @@ public class EventPublishingTestExecutionListenerIntegrationTests {
 
 		testContextManager.beforeTestMethod(testInstance, method);
 
-		assertThat(countDownLatch.await(2, TimeUnit.SECONDS)).isEqualTo(true);
+		assertThat(countDownLatch.await(2, TimeUnit.SECONDS), equalTo(true));
 
 		verify(listener, only()).beforeTestMethod(testContext);
-		assertThat(TrackingAsyncUncaughtExceptionHandler.asyncException.getMessage())
-			.startsWith("Asynchronous exception for test method [" + methodName + "] in thread [" + THREAD_NAME_PREFIX);
+		assertThat(TrackingAsyncUncaughtExceptionHandler.asyncException.getMessage(),
+			startsWith("Asynchronous exception for test method [" + methodName + "] in thread [" + THREAD_NAME_PREFIX));
 	}
 
 	@Test
 	public void beforeTestExecutionAnnotation() throws Exception {
-		testContextManager.beforeTestExecution(testInstance, traceableTestMethod);
+		testContextManager.beforeTestExecution(testInstance, testMethod);
 		verify(listener, only()).beforeTestExecution(testContext);
 	}
 
 	@Test
 	public void afterTestExecutionAnnotation() throws Exception {
-		testContextManager.afterTestExecution(testInstance, traceableTestMethod, null);
+		testContextManager.afterTestExecution(testInstance, testMethod, null);
 		verify(listener, only()).afterTestExecution(testContext);
 	}
 
 	@Test
 	public void afterTestMethodAnnotation() throws Exception {
-		testContextManager.afterTestMethod(testInstance, traceableTestMethod, null);
+		testContextManager.afterTestMethod(testInstance, testMethod, null);
 		verify(listener, only()).afterTestMethod(testContext);
 	}
 
@@ -182,8 +191,9 @@ public class EventPublishingTestExecutionListenerIntegrationTests {
 	@interface Traceable {
 	}
 
-	@ExtendWith(SpringExtension.class)
+	@RunWith(SpringRunner.class)
 	@ContextConfiguration(classes = TestEventListenerConfiguration.class)
+	@TestExecutionListeners(EventPublishingTestExecutionListener.class)
 	public static class ExampleTestCase {
 
 		@Traceable

@@ -1,11 +1,11 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,22 +24,24 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import reactor.test.StepVerifier;
 
 import org.springframework.core.codec.CharSequenceEncoder;
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.testfixture.io.buffer.DataBufferTestUtils;
+import org.springframework.core.io.buffer.support.DataBufferTestUtils;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.json.Jackson2JsonEncoder;
 import org.springframework.http.codec.xml.Jaxb2XmlEncoder;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.ModelMap;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static junit.framework.TestCase.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 
 /**
  * Unit tests for {@link HttpMessageWriterView}.
@@ -56,9 +58,10 @@ public class HttpMessageWriterViewTests {
 
 	@Test
 	public void supportedMediaTypes() throws Exception {
-		assertThat(this.view.getSupportedMediaTypes()).isEqualTo(Arrays.asList(
-				MediaType.APPLICATION_JSON,
-				MediaType.parseMediaType("application/*+json")));
+		assertEquals(Arrays.asList(
+				MediaType.parseMediaType("application/json;charset=UTF-8"),
+				MediaType.parseMediaType("application/*+json;charset=UTF-8")),
+				this.view.getSupportedMediaTypes());
 	}
 
 	@Test
@@ -68,7 +71,7 @@ public class HttpMessageWriterViewTests {
 		this.model.addAttribute("foo2", Collections.singleton("bar2"));
 		this.model.addAttribute("foo3", Collections.singleton("bar3"));
 
-		assertThat(doRender()).isEqualTo("[\"bar2\"]");
+		assertEquals("[\"bar2\"]", doRender());
 	}
 
 	@Test
@@ -76,7 +79,7 @@ public class HttpMessageWriterViewTests {
 		this.view.setModelKeys(Collections.singleton("foo2"));
 		this.model.addAttribute("foo1", "bar1");
 
-		assertThat(doRender()).isEqualTo("");
+		assertEquals("", doRender());
 	}
 
 	@Test
@@ -85,7 +88,7 @@ public class HttpMessageWriterViewTests {
 		this.view.setModelKeys(new HashSet<>(Collections.singletonList("foo1")));
 		this.model.addAttribute("foo1", "bar1");
 
-		assertThat(doRender()).isEqualTo("");
+		assertEquals("", doRender());
 	}
 
 	@Test
@@ -95,7 +98,7 @@ public class HttpMessageWriterViewTests {
 		this.model.addAttribute("foo2", Collections.singleton("bar2"));
 		this.model.addAttribute("foo3", Collections.singleton("bar3"));
 
-		assertThat(doRender()).isEqualTo("{\"foo1\":[\"bar1\"],\"foo2\":[\"bar2\"]}");
+		assertEquals("{\"foo1\":[\"bar1\"],\"foo2\":[\"bar2\"]}", doRender());
 	}
 
 	@Test
@@ -105,9 +108,14 @@ public class HttpMessageWriterViewTests {
 		this.model.addAttribute("foo1", "bar1");
 		this.model.addAttribute("foo2", "bar2");
 
-		assertThatIllegalStateException().isThrownBy(
-				this::doRender)
-			.withMessageContaining("Map rendering is not supported");
+		try {
+			doRender();
+			fail();
+		}
+		catch (IllegalStateException ex) {
+			String message = ex.getMessage();
+			assertTrue(message, message.contains("Map rendering is not supported"));
+		}
 	}
 
 	@Test
@@ -121,7 +129,7 @@ public class HttpMessageWriterViewTests {
 		this.view.render(this.model, MediaType.APPLICATION_JSON, exchange).block(Duration.ZERO);
 
 		StepVerifier.create(this.exchange.getResponse().getBody())
-				.consumeNextWith(buf -> assertThat(dumpString(buf)).isEqualTo("{\"foo\":\"f\",\"bar\":\"b\"}"))
+				.consumeNextWith(buf -> assertEquals("{\"foo\":\"f\",\"bar\":\"b\"}", dumpString(buf)))
 				.expectComplete()
 				.verify();
 	}

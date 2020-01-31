@@ -1,11 +1,11 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,17 +16,16 @@
 
 package org.springframework.aop.aspectj.annotation;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import test.aop.PerTargetAspect;
 
 import org.springframework.aop.Pointcut;
 import org.springframework.aop.aspectj.AspectJExpressionPointcut;
 import org.springframework.aop.aspectj.AspectJExpressionPointcutTests;
 import org.springframework.aop.framework.AopConfigException;
-import org.springframework.beans.testfixture.beans.TestBean;
+import org.springframework.tests.sample.beans.TestBean;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.junit.Assert.*;
 
 /**
  * @author Rod Johnson
@@ -47,8 +46,8 @@ public class AspectJPointcutAdvisorTests {
 				new SingletonMetadataAwareAspectInstanceFactory(new AbstractAspectJAdvisorFactoryTests.ExceptionAspect(null), "someBean"),
 				1, "someBean");
 
-		assertThat(ajpa.getAspectMetadata().getPerClausePointcut()).isSameAs(Pointcut.TRUE);
-		assertThat(ajpa.isPerInstance()).isFalse();
+		assertSame(Pointcut.TRUE, ajpa.getAspectMetadata().getPerClausePointcut());
+		assertFalse(ajpa.isPerInstance());
 	}
 
 	@Test
@@ -61,29 +60,26 @@ public class AspectJPointcutAdvisorTests {
 				new SingletonMetadataAwareAspectInstanceFactory(new PerTargetAspect(), "someBean"),
 				1, "someBean");
 
-		assertThat(ajpa.getAspectMetadata().getPerClausePointcut()).isNotSameAs(Pointcut.TRUE);
-		boolean condition = ajpa.getAspectMetadata().getPerClausePointcut() instanceof AspectJExpressionPointcut;
-		assertThat(condition).isTrue();
-		assertThat(ajpa.isPerInstance()).isTrue();
+		assertNotSame(Pointcut.TRUE, ajpa.getAspectMetadata().getPerClausePointcut());
+		assertTrue(ajpa.getAspectMetadata().getPerClausePointcut() instanceof AspectJExpressionPointcut);
+		assertTrue(ajpa.isPerInstance());
 
-		assertThat(ajpa.getAspectMetadata().getPerClausePointcut().getClassFilter().matches(TestBean.class)).isTrue();
-		assertThat(ajpa.getAspectMetadata().getPerClausePointcut().getMethodMatcher().matches(
-				TestBean.class.getMethod("getAge"), TestBean.class)).isFalse();
+		assertTrue(ajpa.getAspectMetadata().getPerClausePointcut().getClassFilter().matches(TestBean.class));
+		assertFalse(ajpa.getAspectMetadata().getPerClausePointcut().getMethodMatcher().matches(
+				TestBean.class.getMethod("getAge"), TestBean.class));
 
-		assertThat(ajpa.getAspectMetadata().getPerClausePointcut().getMethodMatcher().matches(
-				TestBean.class.getMethod("getSpouse"), TestBean.class)).isTrue();
+		assertTrue(ajpa.getAspectMetadata().getPerClausePointcut().getMethodMatcher().matches(
+				TestBean.class.getMethod("getSpouse"), TestBean.class));
 	}
 
-	@Test
+	@Test(expected = AopConfigException.class)
 	public void testPerCflowTarget() {
-		assertThatExceptionOfType(AopConfigException.class).isThrownBy(() ->
-				testIllegalInstantiationModel(AbstractAspectJAdvisorFactoryTests.PerCflowAspect.class));
+		testIllegalInstantiationModel(AbstractAspectJAdvisorFactoryTests.PerCflowAspect.class);
 	}
 
-	@Test
+	@Test(expected = AopConfigException.class)
 	public void testPerCflowBelowTarget() {
-		assertThatExceptionOfType(AopConfigException.class).isThrownBy(() ->
-				testIllegalInstantiationModel(AbstractAspectJAdvisorFactoryTests.PerCflowBelowAspect.class));
+		testIllegalInstantiationModel(AbstractAspectJAdvisorFactoryTests.PerCflowBelowAspect.class);
 	}
 
 	private void testIllegalInstantiationModel(Class<?> c) throws AopConfigException {

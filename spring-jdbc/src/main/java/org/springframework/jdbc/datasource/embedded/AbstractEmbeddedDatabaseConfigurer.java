@@ -1,11 +1,11 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,14 +18,10 @@ package org.springframework.jdbc.datasource.embedded;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Statement;
-
 import javax.sql.DataSource;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.springframework.jdbc.support.JdbcUtils;
 
 /**
  * Base class for {@link EmbeddedDatabaseConfigurer} implementations
@@ -46,16 +42,21 @@ abstract class AbstractEmbeddedDatabaseConfigurer implements EmbeddedDatabaseCon
 		try {
 			con = dataSource.getConnection();
 			if (con != null) {
-				try (Statement stmt = con.createStatement()) {
-					stmt.execute("SHUTDOWN");
-				}
+				con.createStatement().execute("SHUTDOWN");
 			}
 		}
 		catch (SQLException ex) {
 			logger.info("Could not shut down embedded database", ex);
 		}
 		finally {
-			JdbcUtils.closeConnection(con);
+			if (con != null) {
+				try {
+					con.close();
+				}
+				catch (Throwable ex) {
+					logger.debug("Could not close JDBC Connection on shutdown", ex);
+				}
+			}
 		}
 	}
 

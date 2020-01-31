@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -63,7 +63,6 @@ public final class MockMvcWebConnection implements WebConnection {
 
 	private final MockMvc mockMvc;
 
-	@Nullable
 	private final String contextPath;
 
 	private WebClient webClient;
@@ -92,7 +91,7 @@ public final class MockMvcWebConnection implements WebConnection {
 	 * @param webClient the {@link WebClient} to use (never {@code null})
 	 * @param contextPath the contextPath to use
 	 */
-	public MockMvcWebConnection(MockMvc mockMvc, WebClient webClient, @Nullable String contextPath) {
+	public MockMvcWebConnection(MockMvc mockMvc, WebClient webClient, String contextPath) {
 		Assert.notNull(mockMvc, "MockMvc must not be null");
 		Assert.notNull(webClient, "WebClient must not be null");
 		validateContextPath(contextPath);
@@ -125,7 +124,6 @@ public final class MockMvcWebConnection implements WebConnection {
 	}
 
 
-	@Override
 	public WebResponse getResponse(WebRequest webRequest) throws IOException {
 		long startTime = System.currentTimeMillis();
 		HtmlUnitRequestBuilder requestBuilder = new HtmlUnitRequestBuilder(this.sessions, this.webClient, webRequest);

@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,15 +18,16 @@ package org.springframework.messaging.rsocket;
 
 import java.time.Duration;
 
+import io.netty.buffer.PooledByteBufAllocator;
+import io.rsocket.Frame;
+import io.rsocket.RSocket;
 import io.rsocket.RSocketFactory;
-import io.rsocket.SocketAcceptor;
-import io.rsocket.frame.decoder.PayloadDecoder;
-import io.rsocket.metadata.WellKnownMimeType;
+import io.rsocket.transport.netty.client.TcpClientTransport;
 import io.rsocket.transport.netty.server.CloseableChannel;
 import io.rsocket.transport.netty.server.TcpServerTransport;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
@@ -35,14 +36,15 @@ import reactor.test.StepVerifier;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.codec.CharSequenceEncoder;
+import org.springframework.core.codec.StringDecoder;
+import org.springframework.core.io.buffer.NettyDataBufferFactory;
 import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.rsocket.annotation.support.RSocketMessageHandler;
 import org.springframework.stereotype.Controller;
-import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * Server-side handling of RSocket requests.
@@ -57,38 +59,38 @@ public class RSocketClientToServerIntegrationTests {
 
 	private static FireAndForgetCountingInterceptor interceptor = new FireAndForgetCountingInterceptor();
 
+	private static RSocket client;
+
 	private static RSocketRequester requester;
 
 
-	@BeforeAll
+	@BeforeClass
 	@SuppressWarnings("ConstantConditions")
 	public static void setupOnce() {
-
-		MimeType metadataMimeType = MimeTypeUtils.parseMimeType(
-				WellKnownMimeType.MESSAGE_RSOCKET_ROUTING.getString());
-
 		context = new AnnotationConfigApplicationContext(ServerConfig.class);
-		RSocketMessageHandler messageHandler = context.getBean(RSocketMessageHandler.class);
-		SocketAcceptor responder = messageHandler.responder();
 
 		server = RSocketFactory.receive()
-				.addResponderPlugin(interceptor)
-				.frameDecoder(PayloadDecoder.ZERO_COPY)
-				.acceptor(responder)
+				.addServerPlugin(interceptor)
+				.frameDecoder(Frame::retain)  // as per https://github.com/rsocket/rsocket-java#zero-copy
+				.acceptor(context.getBean(MessageHandlerAcceptor.class))
 				.transport(TcpServerTransport.create("localhost", 7000))
 				.start()
 				.block();
 
-		requester = RSocketRequester.builder()
-				.metadataMimeType(metadataMimeType)
-				.rsocketStrategies(context.getBean(RSocketStrategies.class))
-				.connectTcp("localhost", 7000)
+		client = RSocketFactory.connect()
+				.dataMimeType(MimeTypeUtils.TEXT_PLAIN_VALUE)
+				.frameDecoder(Frame::retain)  // as per https://github.com/rsocket/rsocket-java#zero-copy
+				.transport(TcpClientTransport.create("localhost", 7000))
+				.start()
 				.block();
+
+		requester = RSocketRequester.create(
+				client, MimeTypeUtils.TEXT_PLAIN, context.getBean(RSocketStrategies.class));
 	}
 
-	@AfterAll
+	@AfterClass
 	public static void tearDownOnce() {
-		requester.rsocket().dispose();
+		client.dispose();
 		server.dispose();
 	}
 
@@ -103,14 +105,12 @@ public class RSocketClientToServerIntegrationTests {
 				.expectNext("Hello 1")
 				.expectNext("Hello 2")
 				.expectNext("Hello 3")
-				.thenAwait(Duration.ofMillis(50))
 				.thenCancel()
 				.verify(Duration.ofSeconds(5));
 
-		assertThat(interceptor.getRSocketCount()).isEqualTo(1);
-		assertThat(interceptor.getFireAndForgetCount(0))
-				.as("Fire and forget requests did not actually complete handling on the server side")
-				.isEqualTo(3);
+		assertEquals(1, interceptor.getRSocketCount());
+		assertEquals("Fire and forget requests did not actually complete handling on the server side",
+				3, interceptor.getFireAndForgetCount(0));
 	}
 
 	@Test
@@ -120,8 +120,7 @@ public class RSocketClientToServerIntegrationTests {
 
 		StepVerifier.create(result)
 				.expectNext("Hello 1").expectNext("Hello 2").expectNext("Hello 3")
-				.expectComplete()
-				.verify(Duration.ofSeconds(5));
+				.verifyComplete();
 	}
 
 	@Test
@@ -131,8 +130,7 @@ public class RSocketClientToServerIntegrationTests {
 
 		StepVerifier.create(result)
 				.expectNext("Hello 1 async").expectNext("Hello 2 async").expectNext("Hello 3 async")
-				.expectComplete()
-				.verify(Duration.ofSeconds(5));
+				.verifyComplete();
 	}
 
 	@Test
@@ -142,7 +140,7 @@ public class RSocketClientToServerIntegrationTests {
 		StepVerifier.create(result)
 				.expectNext("Hello 0").expectNextCount(6).expectNext("Hello 7")
 				.thenCancel()
-				.verify(Duration.ofSeconds(5));
+				.verify();
 	}
 
 	@Test
@@ -153,46 +151,37 @@ public class RSocketClientToServerIntegrationTests {
 
 		StepVerifier.create(result)
 				.expectNext("Hello 1 async").expectNextCount(8).expectNext("Hello 10 async")
-				.thenCancel()  // https://github.com/rsocket/rsocket-java/issues/613
-				.verify(Duration.ofSeconds(5));
+				.verifyComplete();
 	}
 
 	@Test
 	public void voidReturnValue() {
-		Mono<String> result = requester.route("void-return-value").data("Hello").retrieveMono(String.class);
-		StepVerifier.create(result).expectComplete().verify(Duration.ofSeconds(5));
+		Flux<String> result = requester.route("void-return-value").data("Hello").retrieveFlux(String.class);
+		StepVerifier.create(result).verifyComplete();
 	}
 
 	@Test
 	public void voidReturnValueFromExceptionHandler() {
-		Mono<String> result = requester.route("void-return-value").data("bad").retrieveMono(String.class);
-		StepVerifier.create(result).expectComplete().verify(Duration.ofSeconds(5));
+		Flux<String> result = requester.route("void-return-value").data("bad").retrieveFlux(String.class);
+		StepVerifier.create(result).verifyComplete();
 	}
 
 	@Test
 	public void handleWithThrownException() {
 		Mono<String> result = requester.route("thrown-exception").data("a").retrieveMono(String.class);
-		StepVerifier.create(result)
-				.expectNext("Invalid input error handled")
-				.expectComplete()
-				.verify(Duration.ofSeconds(5));
+		StepVerifier.create(result).expectNext("Invalid input error handled").verifyComplete();
 	}
 
 	@Test
 	public void handleWithErrorSignal() {
 		Mono<String> result = requester.route("error-signal").data("a").retrieveMono(String.class);
-		StepVerifier.create(result)
-				.expectNext("Invalid input error handled")
-				.expectComplete()
-				.verify(Duration.ofSeconds(5));
+		StepVerifier.create(result).expectNext("Invalid input error handled").verifyComplete();
 	}
 
 	@Test
 	public void noMatchingRoute() {
 		Mono<String> result = requester.route("invalid").data("anything").retrieveMono(String.class);
-		StepVerifier.create(result)
-				.expectErrorMessage("No handler for destination 'invalid'")
-				.verify(Duration.ofSeconds(5));
+		StepVerifier.create(result).verifyErrorMessage("No handler for destination 'invalid'");
 	}
 
 
@@ -264,15 +253,19 @@ public class RSocketClientToServerIntegrationTests {
 		}
 
 		@Bean
-		public RSocketMessageHandler messageHandler() {
-			RSocketMessageHandler handler = new RSocketMessageHandler();
-			handler.setRSocketStrategies(rsocketStrategies());
-			return handler;
+		public MessageHandlerAcceptor messageHandlerAcceptor() {
+			MessageHandlerAcceptor acceptor = new MessageHandlerAcceptor();
+			acceptor.setRSocketStrategies(rsocketStrategies());
+			return acceptor;
 		}
 
 		@Bean
 		public RSocketStrategies rsocketStrategies() {
-			return RSocketStrategies.create();
+			return RSocketStrategies.builder()
+					.decoder(StringDecoder.allMimeTypes())
+					.encoder(CharSequenceEncoder.allMimeTypes())
+					.dataBufferFactory(new NettyDataBufferFactory(PooledByteBufAllocator.DEFAULT))
+					.build();
 		}
 	}
 

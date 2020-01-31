@@ -1,11 +1,11 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -62,16 +62,7 @@ public abstract class AbstractListenerWriteProcessor<T> implements Processor<T, 
 	@Nullable
 	private volatile T currentData;
 
-	/* Indicates "onComplete" was received during the (last) write. */
 	private volatile boolean subscriberCompleted;
-
-	/**
-	 * Indicates we're waiting for one last isReady-onWritePossible cycle
-	 * after "onComplete" because some Servlet containers expect this to take
-	 * place prior to calling AsyncContext.complete().
-	 * See https://github.com/eclipse-ee4j/servlet-api/issues/273
-	 */
-	private volatile boolean readyToCompleteAfterLastWrite;
 
 	private final WriteResultPublisher resultPublisher;
 
@@ -331,12 +322,6 @@ public abstract class AbstractListenerWriteProcessor<T> implements Processor<T, 
 					super.onSubscribe(processor, subscription);
 				}
 			}
-
-			@Override
-			public <T> void onComplete(AbstractListenerWriteProcessor<T> processor) {
-				// This can happen on (very early) completion notification from container..
-				processor.changeStateToComplete(this);
-			}
 		},
 
 		REQUESTED {
@@ -353,8 +338,7 @@ public abstract class AbstractListenerWriteProcessor<T> implements Processor<T, 
 			}
 			@Override
 			public <T> void onComplete(AbstractListenerWriteProcessor<T> processor) {
-				processor.readyToCompleteAfterLastWrite = true;
-				processor.changeStateToReceived(this);
+				processor.changeStateToComplete(this);
 			}
 		},
 
@@ -362,10 +346,7 @@ public abstract class AbstractListenerWriteProcessor<T> implements Processor<T, 
 			@SuppressWarnings("deprecation")
 			@Override
 			public <T> void onWritePossible(AbstractListenerWriteProcessor<T> processor) {
-				if (processor.readyToCompleteAfterLastWrite) {
-					processor.changeStateToComplete(RECEIVED);
-				}
-				else if (processor.changeState(this, WRITING)) {
+				if (processor.changeState(this, WRITING)) {
 					T data = processor.currentData;
 					Assert.state(data != null, "No data");
 					try {
@@ -373,8 +354,7 @@ public abstract class AbstractListenerWriteProcessor<T> implements Processor<T, 
 							if (processor.changeState(WRITING, REQUESTED)) {
 								processor.currentData = null;
 								if (processor.subscriberCompleted) {
-									processor.readyToCompleteAfterLastWrite = true;
-									processor.changeStateToReceived(REQUESTED);
+									processor.changeStateToComplete(REQUESTED);
 								}
 								else {
 									processor.writingPaused();
@@ -396,10 +376,6 @@ public abstract class AbstractListenerWriteProcessor<T> implements Processor<T, 
 			@Override
 			public <T> void onComplete(AbstractListenerWriteProcessor<T> processor) {
 				processor.subscriberCompleted = true;
-				// A competing write might have completed very quickly
-				if (processor.state.get().equals(State.REQUESTED)) {
-					processor.changeStateToComplete(State.REQUESTED);
-				}
 			}
 		},
 
@@ -407,10 +383,6 @@ public abstract class AbstractListenerWriteProcessor<T> implements Processor<T, 
 			@Override
 			public <T> void onComplete(AbstractListenerWriteProcessor<T> processor) {
 				processor.subscriberCompleted = true;
-				// A competing write might have completed very quickly
-				if (processor.state.get().equals(State.REQUESTED)) {
-					processor.changeStateToComplete(State.REQUESTED);
-				}
 			}
 		},
 
