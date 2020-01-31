@@ -1,11 +1,11 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,7 +18,7 @@ package org.springframework.http.server.reactive;
 
 import java.net.URI;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
 import reactor.core.publisher.Mono;
 
 import org.springframework.http.HttpStatus;
@@ -26,13 +26,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.web.client.ResponseErrorHandler;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.testfixture.http.server.reactive.bootstrap.AbstractHttpHandlerIntegrationTests;
+import org.springframework.web.testfixture.http.server.reactive.bootstrap.HttpServer;
+import org.springframework.web.testfixture.http.server.reactive.bootstrap.ReactorHttpServer;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Arjen Poutsma
  */
-public class ErrorHandlerIntegrationTests extends AbstractHttpHandlerIntegrationTests {
+class ErrorHandlerIntegrationTests extends AbstractHttpHandlerIntegrationTests {
 
 	private final ErrorHandler handler = new ErrorHandler();
 
@@ -43,30 +46,39 @@ public class ErrorHandlerIntegrationTests extends AbstractHttpHandlerIntegration
 	}
 
 
-	@Test
-	public void responseBodyError() throws Exception {
+	@ParameterizedHttpServerTest
+	void responseBodyError(HttpServer httpServer) throws Exception {
+		startServer(httpServer);
+
 		RestTemplate restTemplate = new RestTemplate();
 		restTemplate.setErrorHandler(NO_OP_ERROR_HANDLER);
 
 		URI url = new URI("http://localhost:" + port + "/response-body-error");
 		ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
 
-		assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 
-	@Test
-	public void handlingError() throws Exception {
+	@ParameterizedHttpServerTest
+	void handlingError(HttpServer httpServer) throws Exception {
+		startServer(httpServer);
+
 		RestTemplate restTemplate = new RestTemplate();
 		restTemplate.setErrorHandler(NO_OP_ERROR_HANDLER);
 
 		URI url = new URI("http://localhost:" + port + "/handling-error");
 		ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
 
-		assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 
-	@Test // SPR-15560
-	public void emptyPathSegments() throws Exception {
+	@ParameterizedHttpServerTest // SPR-15560
+	void emptyPathSegments(HttpServer httpServer) throws Exception {
+
+		/* Temporarily necessary for https://github.com/reactor/reactor-netty/issues/948 */
+		Assumptions.assumeFalse(httpServer instanceof ReactorHttpServer);
+
+		startServer(httpServer);
 
 		RestTemplate restTemplate = new RestTemplate();
 		restTemplate.setErrorHandler(NO_OP_ERROR_HANDLER);
@@ -74,7 +86,7 @@ public class ErrorHandlerIntegrationTests extends AbstractHttpHandlerIntegration
 		URI url = new URI("http://localhost:" + port + "//");
 		ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
 
-		assertEquals(HttpStatus.OK, response.getStatusCode());
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 	}
 
 
